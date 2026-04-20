@@ -2,7 +2,7 @@
 
 **Project:** BackendTechnicalAssetsManagement
 **Test Framework:** xUnit + Moq + FluentAssertions
-**Status:** ✅ 157 / 157 passing — all green
+**Status:** ✅ 157 / 157 passing — 36 items pending implementation
 
 ---
 
@@ -20,15 +20,15 @@
 BackendTechincalAssetsManagementTest/
 ├── Services/
 │   ├── AuthServiceTests.cs          ✅ Part 1  — 13 tests
-│   ├── UserServiceTests.cs          ✅ Part 2  — 22 tests
-│   ├── ItemServiceTests.cs          ✅ Part 3  — 22 tests
-│   ├── LentItemsServiceTests.cs     ✅ Part 4  — 20 tests
-│   ├── ActivityLogServiceTests.cs   ✅ Part 5  — 12 tests
+│   ├── UserServiceTests.cs          ✅ Part 2  — 22 tests  (3 pending)
+│   ├── ItemServiceTests.cs          ✅ Part 3  — 22 tests  (2 pending)
+│   ├── LentItemsServiceTests.cs     ✅ Part 4  — 20 tests  (18 pending)
+│   ├── ActivityLogServiceTests.cs   ✅ Part 5  — 12 tests  (1 pending)
 │   ├── SummaryServiceTests.cs       ✅ Part 6  —  9 tests
 │   ├── ArchiveServiceTests.cs       ✅ Part 7  — 18 tests
 │   └── NotificationServiceTests.cs  ✅ Part 8  —  8 tests
 ├── Utilities/
-│   └── UtilityServiceTests.cs       ✅ Part 10 — 12 tests
+│   └── UtilityServiceTests.cs       ✅ Part 10 — 12 tests  (12 pending)
 └── UnitTest1.cs                     (placeholder — 1 test)
 ```
 
@@ -43,23 +43,18 @@ BackendTechincalAssetsManagementTest/
 
 ## xUnit Implementation Pattern
 
-Every test class follows this structure:
-
 ```csharp
 public class XxxServiceTests
 {
-    // 1. Declare mocks as readonly fields
     private readonly Mock<IXxxRepository> _mockRepo;
-    private readonly XxxService _sut; // System Under Test
+    private readonly XxxService _sut;
 
-    // 2. Constructor = test setup (replaces [SetUp] from NUnit)
     public XxxServiceTests()
     {
         _mockRepo = new Mock<IXxxRepository>();
         _sut = new XxxService(_mockRepo.Object);
     }
 
-    // 3. [Fact] = single test case
     [Fact]
     public async Task MethodName_ExpectedBehavior_WhenCondition()
     {
@@ -67,18 +62,12 @@ public class XxxServiceTests
         // Act     — call the method under test
         // Assert  — verify with FluentAssertions
     }
-
-    // 4. [Theory] + [InlineData] = parameterized test
-    [Theory]
-    [InlineData(UserRole.Student)]
-    [InlineData(UserRole.Teacher)]
-    public async Task MethodName_Behavior(UserRole role) { ... }
 }
 ```
 
 ---
 
-## 1. Authentication & Identity (`AuthService`) — 13 tests ✅
+## 1. Authentication & Identity (`AuthService`) — 13 / 13 ✅
 
 **File:** `Services/AuthServiceTests.cs`
 
@@ -98,7 +87,7 @@ public class XxxServiceTests
 
 ---
 
-## 2. User Management (`UserService`) — 22 tests ✅
+## 2. User Management (`UserService`) — 22 / 25
 
 **File:** `Services/UserServiceTests.cs`
 
@@ -122,6 +111,7 @@ public class XxxServiceTests
 - [x] `UpdateUserProfile_Returns_True_When_SaveSucceeds`
 - [x] `UpdateStudentProfile_Returns_False_When_UserNotFound`
 - [x] `UpdateStudentProfile_Returns_True_When_SaveSucceeds`
+- [ ] `UpdateStudentProfile_UploadsProfilePicture_WhenImageProvided`
 - [x] `UpdateStaffOrAdminProfile_Throws_When_CurrentUserNotFound`
 - [x] `UpdateStaffOrAdminProfile_Throws_When_TargetUserNotFound`
 - [x] `UpdateStaffOrAdminProfile_Throws_When_CallerLacksPermission`
@@ -144,9 +134,14 @@ public class XxxServiceTests
 - [x] `GetStudentByRfid_Returns_Null_When_NotFound`
 - [x] `GetStudentByRfid_Returns_Student_When_Found`
 
+### Import (pending)
+
+- [ ] `ImportStudentsFromExcelAsync_ReturnsFailure_WhenFileInvalid`
+- [ ] `ImportStudentsFromExcelAsync_ReturnsDetailedResults_OnPartialSuccess`
+
 ---
 
-## 3. Inventory & Items (`ItemService`) — 22 tests ✅
+## 3. Inventory & Items (`ItemService`) — 22 / 24
 
 **File:** `Services/ItemServiceTests.cs`
 
@@ -189,9 +184,14 @@ public class XxxServiceTests
 - [x] `RegisterRfidToItem_Returns_Failure_When_RfidAlreadyTakenByAnotherItem`
 - [x] `RegisterRfidToItem_Returns_Success_When_Registered`
 
+### Import (pending)
+
+- [ ] `ImportItemsFromExcelAsync_ParsesXlsx_AndCreatesItemsSuccessfully`
+- [ ] `ImportItemsFromExcelAsync_ReturnsPartialSuccess_WhenSomeRowsHaveErrors`
+
 ---
 
-## 4. Lending & Circulation (`LentItemsService`) — 20 tests ✅
+## 4. Lending & Circulation (`LentItemsService`) — 20 / 38
 
 **File:** `Services/LentItemsServiceTests.cs`
 
@@ -203,6 +203,8 @@ public class XxxServiceTests
 - [x] `AddAsync_Throws_When_ItemNotFound`
 - [x] `AddAsync_Succeeds_And_Returns_MappedDto`
 - [x] `AddAsync_WritesActivityLog_OnSuccess`
+- [ ] `AddAsync_Throws_When_ReservationTimeSlotConflicts`
+- [ ] `AddAsync_SendsNotification_OnSuccess`
 
 ### Guest Borrow (`AddForGuestAsync`)
 
@@ -210,12 +212,31 @@ public class XxxServiceTests
 - [x] `AddForGuestAsync_Throws_When_Item_IsInBadCondition` — `[Theory]` × 2 (Defective / NeedRepair)
 - [x] `AddForGuestAsync_Throws_When_Item_IsAlreadyBorrowed`
 - [x] `AddForGuestAsync_Sets_BorrowerRole_To_Guest`
+- [ ] `AddForGuestAsync_Stores_Organization_ContactNumber_Purpose`
+- [ ] `AddForGuestAsync_Uploads_GuestImage_WhenImageProvided`
+- [ ] `AddForGuestAsync_Sets_IssuedById_FromCallerIdentity`
+- [ ] `AddForGuestAsync_Returns_CreatedLentItem_WhenValid`
+- [ ] `AddForGuestAsync_WritesActivityLog_OnSuccess`
+
+### Update (`UpdateAsync`)
+
+- [ ] `UpdateAsync_Returns_False_When_LentItemNotFound`
+- [ ] `UpdateAsync_Returns_True_When_ValidUpdateApplied`
+- [ ] `UpdateAsync_WritesActivityLog_WhenStatusChanges`
+- [ ] `UpdateAsync_SendsNotification_WhenStatusChanges`
+
+### Update Status (`UpdateStatusAsync`)
+
+- [ ] `UpdateStatusAsync_Returns_False_When_LentItemNotFound`
+- [ ] `UpdateStatusAsync_TransitionsStatus_SetsTimestamps_AndWritesLog`
 
 ### Queries
 
 - [x] `GetAll_Returns_AllLentItems`
 - [x] `GetById_Returns_Null_When_NotFound`
 - [x] `GetById_Returns_MappedDto_When_Found`
+- [ ] `GetAllBorrowedItems_Returns_OnlyBorrowedStatus`
+- [ ] `GetByDateTime_FiltersCorrectly_GivenUtcDateTime`
 
 ### Visibility & Archival
 
@@ -232,10 +253,13 @@ public class XxxServiceTests
 - [x] `CancelExpiredReservations_Returns_Zero_When_NoExpiredReservations`
 - [x] `CancelExpiredReservations_Cancels_Stale_Reservations_And_Returns_Count`
 - [x] `CancelExpiredReservations_DoesNotCancel_AlreadyPickedUp_Reservations`
+- [ ] `CancelExpiredReservations_WritesActivityLog_ForEachCanceled`
+- [ ] `IsItemAvailableForReservation_Returns_False_WhenSlotConflicts`
+- [ ] `IsItemAvailableForReservation_Returns_True_WhenNoConflict`
 
 ---
 
-## 5. Activity Logs (`ActivityLogService`) — 12 tests ✅
+## 5. Activity Logs (`ActivityLogService`) — 12 / 13
 
 **File:** `Services/ActivityLogServiceTests.cs`
 
@@ -257,6 +281,7 @@ public class XxxServiceTests
 
 - [x] `GetBorrowLogs_Queries_BorrowedItem_And_Returned_Categories`
 - [x] `GetBorrowLogs_Returns_Empty_When_NoLogsExist`
+- [ ] `GetBorrowLogs_FiltersBy_DateRange_UserId_ItemId`
 
 ### LogAsync
 
@@ -265,7 +290,7 @@ public class XxxServiceTests
 
 ---
 
-## 6. Statistical Summaries (`SummaryService`) — 9 tests ✅
+## 6. Statistical Summaries (`SummaryService`) — 9 / 9 ✅
 
 **File:** `Services/SummaryServiceTests.cs`
 
@@ -292,7 +317,7 @@ public class XxxServiceTests
 
 ---
 
-## 7. Archival Services — 18 tests ✅
+## 7. Archival Services — 18 / 18 ✅
 
 **File:** `Services/ArchiveServiceTests.cs`
 
@@ -324,7 +349,7 @@ public class XxxServiceTests
 
 ---
 
-## 8. Real-Time Notifications (`NotificationService`) — 8 tests ✅
+## 8. Real-Time Notifications (`NotificationService`) — 8 / 8 ✅
 
 **File:** `Services/NotificationServiceTests.cs`
 
@@ -364,11 +389,11 @@ and belongs in an integration test suite, not the unit test project.
 
 ---
 
-## 10. Utility & Infrastructure Services — 12 tests ✅
+## 10. Utility & Infrastructure Services — 12 / 24
 
 **File:** `Utilities/UtilityServiceTests.cs`
 
-### PasswordHashingService
+### PasswordHashingService ✅
 
 - [x] `HashPassword_Produces_Hash_Different_From_Plaintext`
 - [x] `HashPassword_Produces_Different_Hashes_For_Same_Input`
@@ -379,6 +404,30 @@ and belongs in an integration test suite, not the unit test project.
 - [x] `VerifyPassword_Returns_False_For_Empty_Password`
 - [x] `VerifyPassword_Returns_False_For_Empty_Hash`
 - [x] `VerifyPassword_Returns_False_For_CaseSensitive_Mismatch`
+
+### ExcelReaderService (pending)
+
+- [ ] `Parse_ThrowsException_IfFileIsNotXlsx`
+- [ ] `Parse_ReadsWorksheets_AndYieldsExpectedDictionaryMap`
+
+### FileValidationUtils (pending)
+
+- [ ] `ValidateImportFile_ReturnsInvalid_WhenExtensionIsNotXlsxOrCsv`
+- [ ] `ValidateImportFile_ReturnsInvalid_WhenMagicBytesDoNotMatchExtension`
+- [ ] `ValidateImportFile_ReturnsValid_ForLegitimateXlsxFile`
+
+### ImageConverterUtils (pending)
+
+- [ ] `ValidateImage_ThrowsArgumentException_WhenImageExceedsSizeLimit`
+- [ ] `ValidateImage_ThrowsArgumentException_WhenFormatIsNotAllowed`
+- [ ] `ValidateImage_DoesNotThrow_ForValidJpegOrPng`
+
+### Background Jobs (pending)
+
+- [ ] `RefreshTokenCleanup_ExecuteAsync_SkipsIfCancellationRequested_AtStartup`
+- [ ] `RefreshTokenCleanup_ExecuteAsync_TriggersCleanup_OnEachCycle`
+- [ ] `ReservationExpiry_ExecuteAsync_SkipsIfCancellationRequested_AtStartup`
+- [ ] `ReservationExpiry_CallsCancelExpiredReservationsAsync_OnEachCycle`
 
 ---
 
@@ -391,3 +440,13 @@ Failed:     0
 Skipped:    0
 Duration: ~1s
 ```
+
+### Pending (36 items)
+
+| Part                   | Count | Items                                                                                                             |
+| ---------------------- | ----- | ----------------------------------------------------------------------------------------------------------------- |
+| 2 — UserService        | 3     | UpdateStudentProfile image upload, ImportStudents × 2                                                             |
+| 3 — ItemService        | 2     | ImportItems × 2                                                                                                   |
+| 4 — LentItemsService   | 18    | AddAsync × 2, AddForGuest × 5, UpdateAsync × 4, UpdateStatus × 2, Queries × 2, CancelExpired × 1, IsAvailable × 2 |
+| 5 — ActivityLogService | 1     | GetBorrowLogs date/user/item filter                                                                               |
+| 10 — Utilities         | 12    | ExcelReader × 2, FileValidation × 3, ImageConverter × 3, BackgroundJobs × 4                                       |
