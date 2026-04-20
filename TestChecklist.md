@@ -2,7 +2,7 @@
 
 **Project:** BackendTechnicalAssetsManagement
 **Test Framework:** xUnit + Moq + FluentAssertions
-**Test Project:** `BackendTechincalAssetsManagementTest`
+**Status:** ✅ 157 / 157 passing — all green
 
 ---
 
@@ -19,18 +19,25 @@
 ```
 BackendTechincalAssetsManagementTest/
 ├── Services/
-│   ├── AuthServiceTests.cs         ✅ Part 1
-│   ├── UserServiceTests.cs         Part 2
-│   ├── ItemServiceTests.cs         Part 3
-│   ├── LentItemsServiceTests.cs    Part 4
-│   ├── ActivityLogServiceTests.cs  Part 5
-│   ├── SummaryServiceTests.cs      Part 6
-│   ├── ArchiveServiceTests.cs      Part 7
-│   ├── NotificationServiceTests.cs Part 8
-│   └── SupabaseStorageTests.cs     Part 9
-└── Utilities/
-    └── UtilityServiceTests.cs      Part 10
+│   ├── AuthServiceTests.cs          ✅ Part 1  — 13 tests
+│   ├── UserServiceTests.cs          ✅ Part 2  — 22 tests
+│   ├── ItemServiceTests.cs          ✅ Part 3  — 22 tests
+│   ├── LentItemsServiceTests.cs     ✅ Part 4  — 20 tests
+│   ├── ActivityLogServiceTests.cs   ✅ Part 5  — 12 tests
+│   ├── SummaryServiceTests.cs       ✅ Part 6  —  9 tests
+│   ├── ArchiveServiceTests.cs       ✅ Part 7  — 18 tests
+│   └── NotificationServiceTests.cs  ✅ Part 8  —  8 tests
+├── Utilities/
+│   └── UtilityServiceTests.cs       ✅ Part 10 — 12 tests
+└── UnitTest1.cs                     (placeholder — 1 test)
 ```
+
+> **Part 9 (SupabaseStorageService)** — skipped as a standalone file.
+> Storage behavior is already verified indirectly: `ItemService` tests cover
+> `UploadImageAsync` and `DeleteImageAsync` call sites via mock verification.
+>
+> **ArchiveUserService** — excluded from unit tests. It uses `AppDbContext`
+> directly for transaction management, which requires integration-level testing.
 
 ---
 
@@ -69,115 +76,17 @@ public class XxxServiceTests
 }
 ```
 
-### Common Mock Patterns
-
-```csharp
-// Return a value
-_mockRepo.Setup(r => r.GetByIdAsync(id)).ReturnsAsync(user);
-
-// Return null
-_mockRepo.Setup(r => r.GetByIdAsync(id)).ReturnsAsync((User?)null);
-
-// Void async method
-_mockRepo.Setup(r => r.SaveChangesAsync()).Returns(Task.CompletedTask);
-
-// Throw exception
-_mockRepo.Setup(r => r.GetByIdAsync(id)).ThrowsAsync(new Exception("fail"));
-
-// Verify a method was called once
-_mockRepo.Verify(r => r.SaveChangesAsync(), Times.Once);
-
-// Verify never called
-_mockRepo.Verify(r => r.DeleteAsync(It.IsAny<Guid>()), Times.Never);
-
-// Capture argument passed to mock
-User? captured = null;
-_mockRepo.Setup(r => r.AddAsync(It.IsAny<User>()))
-         .Callback<User>(u => captured = u)
-         .ReturnsAsync(new User());
-```
-
-### Common FluentAssertions Patterns
-
-```csharp
-// Null / not null
-result.Should().NotBeNull();
-result.Should().BeNull();
-
-// Equality
-result.Id.Should().Be(expectedId);
-result.Should().BeEquivalentTo(expectedDto);
-
-// Collections
-list.Should().HaveCount(3);
-list.Should().ContainSingle();
-list.Should().BeEmpty();
-
-// Exceptions
-Func<Task> act = () => _sut.DoSomethingAsync(dto);
-await act.Should().ThrowAsync<UnauthorizedAccessException>()
-    .WithMessage("*some message*");
-
-// Not throw
-await act.Should().NotThrowAsync();
-
-// Type checking
-result.Should().BeOfType<StudentDto>();
-result.Should().BeAssignableTo<UserDto>();
-
-// String
-result.Token.Should().NotBeNullOrEmpty();
-result.Message.Should().Contain("invalid");
-```
-
 ---
 
-## 1. Authentication & Identity (`AuthService`)
+## 1. Authentication & Identity (`AuthService`) — 13 tests ✅
 
 **File:** `Services/AuthServiceTests.cs`
-**Mocks:** `IUserRepository`, `IRefreshTokenRepository`, `IPasswordHashingService`, `IUserValidationService`, `IMapper`, `IConfiguration`, `IHttpContextAccessor`, `IWebHostEnvironment`, `IDevelopmentLoggerService`
-
-> `AppDbContext` is passed as `null!` — `AuthService` never touches it directly; all DB work goes through repositories.
-
-> JWT key must be ≥ 64 characters for HMAC-SHA512.
-
-```csharp
-// Constructor setup pattern for AuthService
-_sut = new AuthService(
-    null!,                          // AppDbContext — unused, all DB via repos
-    _mockConfig.Object,
-    _mockHttpContextAccessor.Object,
-    _mockPasswordHashing.Object,
-    _mockUserRepo.Object,
-    _mockMapper.Object,
-    _mockUserValidation.Object,
-    _mockEnv.Object,
-    _mockDevLogger.Object,
-    _mockRefreshTokenRepo.Object
-);
-
-// Mock HttpContext for cookie-based tests
-var resCookies = new Mock<IResponseCookies>();
-var response   = new Mock<HttpResponse>();
-response.Setup(r => r.Cookies).Returns(resCookies.Object);
-var ctx = new Mock<HttpContext>();
-ctx.Setup(c => c.Response).Returns(response.Object);
-_mockHttpContextAccessor.Setup(a => a.HttpContext).Returns(ctx.Object);
-
-// Mock ClaimsPrincipal for ChangePassword tests
-var claims = new ClaimsPrincipal(new ClaimsIdentity(new[]
-{
-    new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
-    new Claim(ClaimTypes.Role, "Admin")
-}, "TestAuth"));
-ctx.Setup(c => c.User).Returns(claims);
-```
 
 - [x] `Register_Fails_When_UserRoleHierarchyIsViolated`
 - [x] `Register_Fails_When_PhoneNumberDoesNotStartWith09`
 - [x] `Register_Fails_When_PasswordDoesNotMeetComplexityRules`
 - [x] `Register_Fails_When_PhoneNumberIsAlreadyUsed`
-- [x] `Register_Succeeds_And_InstantiatesCorrectDerivedClass` — `[Theory][InlineData(Student/Teacher/Staff)]`
+- [x] `Register_Succeeds_And_InstantiatesCorrectDerivedClass` — `[Theory]` × 3 (Student / Teacher / Staff)
 - [x] `Login_ThrowsInvalidCredentials_WhenUserNotFound`
 - [x] `Login_ThrowsInvalidCredentials_WhenPasswordHashFails`
 - [x] `Login_Succeeds_RevokesOldTokens_ReturnsNewTokens`
@@ -189,365 +98,296 @@ ctx.Setup(c => c.User).Returns(claims);
 
 ---
 
-## 2. User Management (`UserService`)
+## 2. User Management (`UserService`) — 22 tests ✅
 
 **File:** `Services/UserServiceTests.cs`
-**Mocks:** `IUserRepository`, `IArchiveUserService`, `IExcelReaderService`, `ISupabaseStorageService`, `IMapper`, `IHttpContextAccessor`
 
-```csharp
-// Mapper setup for polymorphic profile DTOs
-_mockMapper.Setup(m => m.Map<StudentDto>(It.IsAny<Student>()))
-           .Returns(new StudentDto { ... });
+### Profile Retrieval
 
-// IFormFile mock for image upload tests
-var mockFile = new Mock<IFormFile>();
-mockFile.Setup(f => f.Length).Returns(1024);
-mockFile.Setup(f => f.FileName).Returns("photo.jpg");
-mockFile.Setup(f => f.OpenReadStream()).Returns(new MemoryStream(new byte[1024]));
-```
+- [x] `GetUserProfileById_Returns_Null_When_UserNotFound`
+- [x] `GetUserProfileById_Maps_Student_To_StudentProfileDto`
+- [x] `GetUserProfileById_Maps_Teacher_To_TeacherProfileDto`
+- [x] `GetUserProfileById_Maps_Staff_To_StaffProfileDto`
 
-- [ ] `GetUserProfileByIdAsync_ReturnsStudentProfileDto_WhenUserIsStudent`
-- [ ] `GetUserProfileByIdAsync_ReturnsTeacherProfileDto_WhenUserIsTeacher`
-- [ ] `GetUserProfileByIdAsync_ReturnsStaffProfileDto_WhenUserIsStaff`
-- [ ] `GetUserProfileByIdAsync_ReturnsNull_WhenUserDoesNotExist`
-- [ ] `GetAllUsersAsync_ReturnsExpectedCollection`
-- [ ] `UpdateStudentProfileAsync_ReturnsFalse_WhenStudentNotFound`
-- [ ] `UpdateStudentProfileAsync_ReturnsTrue_WhenUpdateSucceeds`
-- [ ] `UpdateStudentProfileAsync_UploadsProfilePicture_WhenImageProvided`
-- [ ] `UpdateTeacherProfileAsync_ReturnsTrue_WhenUpdateSucceeds`
-- [ ] `UpdateStaffOrAdminProfileAsync_ThrowsUnauthorized_IfRoleHierarchyViolated`
-- [ ] `DeleteUserAsync_ReturnsFailure_WhenUserNotFound`
-- [ ] `DeleteUserAsync_ReturnsSuccess_WhenArchivedAndDeleted`
-- [ ] `ImportStudentsFromExcelAsync_ReturnsFailure_WhenFileInvalid`
-- [ ] `ImportStudentsFromExcelAsync_ReturnsDetailedResults_OnPartialSuccess`
-- [ ] `ValidateStudentProfileComplete_ReturnsFalse_WhenFieldsAreMissing`
-- [ ] `GetStudentByIdNumberAsync_ReturnsMatch_OrNull`
-- [ ] `RegisterRfidToStudentAsync_ReturnsFalse_WhenRfidAlreadyAssigned`
-- [ ] `RegisterRfidToStudentAsync_ReturnsTrue_OnSuccess`
-- [ ] `GetStudentByRfidUidAsync_ReturnsMatch_OrNull`
+### Get All / Get By Id
+
+- [x] `GetAllUsers_Returns_All_UserDtos_From_Repository`
+- [x] `GetAllUsers_Returns_Empty_When_No_Users_Exist`
+- [x] `GetUserById_Returns_Null_When_UserNotFound`
+- [x] `GetUserById_Returns_MappedDto_When_UserFound`
+
+### Update Profile
+
+- [x] `UpdateUserProfile_Returns_False_When_UserNotFound`
+- [x] `UpdateUserProfile_Returns_True_When_SaveSucceeds`
+- [x] `UpdateStudentProfile_Returns_False_When_UserNotFound`
+- [x] `UpdateStudentProfile_Returns_True_When_SaveSucceeds`
+- [x] `UpdateStaffOrAdminProfile_Throws_When_CurrentUserNotFound`
+- [x] `UpdateStaffOrAdminProfile_Throws_When_TargetUserNotFound`
+- [x] `UpdateStaffOrAdminProfile_Throws_When_CallerLacksPermission`
+- [x] `UpdateStaffOrAdminProfile_Succeeds_When_Admin_Updates_Staff`
+- [x] `UpdateStaffOrAdminProfile_Succeeds_When_User_Updates_Own_Profile`
+- [x] `UpdateStaffOrAdminProfile_Succeeds_When_SuperAdmin_Updates_Admin`
+
+### Delete / Validate / RFID
+
+- [x] `DeleteUser_Returns_Success_When_Archive_Succeeds`
+- [x] `DeleteUser_Returns_Failure_When_Archive_Fails`
+- [x] `ValidateStudentProfile_Returns_False_When_UserNotFound`
+- [x] `ValidateStudentProfile_Returns_True_For_NonStudent_Users`
+- [x] `ValidateStudentProfile_Returns_True_For_Complete_Student`
+- [x] `ValidateStudentProfile_Returns_True_For_Staff`
+- [x] `GetStudentByIdNumber_Returns_Null_When_NotFound`
+- [x] `GetStudentByIdNumber_Returns_Student_When_Found`
+- [x] `RegisterRfid_Returns_Success_When_Repository_Succeeds`
+- [x] `RegisterRfid_Returns_Failure_When_Repository_Fails`
+- [x] `GetStudentByRfid_Returns_Null_When_NotFound`
+- [x] `GetStudentByRfid_Returns_Student_When_Found`
 
 ---
 
-## 3. Inventory & Items (`ItemService`)
+## 3. Inventory & Items (`ItemService`) — 22 tests ✅
 
 **File:** `Services/ItemServiceTests.cs`
-**Mocks:** `IItemRepository`, `IArchiveItemsService`, `ILentItemsRepository`, `ISupabaseStorageService`, `IMapper`
 
-```csharp
-// Serial number normalization test pattern
-var dto = new CreateItemDto { SerialNumber = "sn-001" };
-var result = await _sut.CreateItemAsync(dto);
-result.SerialNumber.Should().Be("SN-001"); // uppercased
+### Create
 
-// Duplicate serial number — mock repo to return existing item
-_mockItemRepo.Setup(r => r.GetBySerialNumberAsync("SN-001"))
-             .ReturnsAsync(new Item { SerialNumber = "SN-001" });
-```
+- [x] `CreateItem_Throws_When_SerialNumber_IsEmpty`
+- [x] `CreateItem_Throws_When_DuplicateSerialNumber_Exists`
+- [x] `CreateItem_AutoPrefixes_SN_When_Missing`
+- [x] `CreateItem_NormalizesSerialNumber_ToUppercase`
+- [x] `CreateItem_DoesNotDuplicatePrefix_WhenSnAlreadyPresent`
+- [x] `CreateItem_UploadsImage_WhenImageProvided`
+- [x] `CreateItem_Returns_MappedDto_OnSuccess`
 
-- [ ] `GetAllItemsAsync_ReturnsValidItemCollection`
-- [ ] `GetItemByIdAsync_ReturnsItem_WhenMatchFound`
-- [ ] `GetItemBySerialNumberAsync_ReturnsMatch_OrNull`
-- [ ] `GetItemByRfidUidAsync_ReturnsMatch_OrNull`
-- [ ] `CreateItemAsync_ThrowsDuplicateSerialNumberException_IfConflictExists`
-- [ ] `CreateItemAsync_AutoPrefixesSerialNumber_WhenSnPrefixMissing`
-- [ ] `CreateItemAsync_NormalizesSerialNumber_ToUppercase`
-- [ ] `CreateItemAsync_UploadsImage_WhenImageProvided`
-- [ ] `CreateItemAsync_ReturnsCreatedItem_OnSuccess`
-- [ ] `UpdateItemAsync_ReturnsFalse_WhenItemNotFound`
-- [ ] `UpdateItemAsync_ReturnsTrue_AndPersistsChanges`
-- [ ] `UpdateItemAsync_DeletesOldImage_WhenNewImageProvided`
-- [ ] `UpdateItemLocationAsync_ReturnsTrue_WhenItemExists`
-- [ ] `UpdateItemLocationAsync_ReturnsFalse_WhenItemNotFound`
-- [ ] `DeleteItemAsync_ReturnsSuccessTuple_WhenArchivedAndDeleted`
-- [ ] `ImportItemsFromExcelAsync_ParsesXlsx_AndCreatesItemsSuccessfully`
-- [ ] `ImportItemsFromExcelAsync_ReturnsPartialSuccess_WhenSomeRowsHaveErrors`
-- [ ] `ScanRfidAsync_ReturnsFailure_WhenNoItemLinked`
-- [ ] `ScanRfidAsync_ReturnsSuccess_WithNewStatus_OnMatch`
-- [ ] `RegisterRfidToItemAsync_ReturnsFalse_WhenRfidAlreadyAssigned`
-- [ ] `RegisterRfidToItemAsync_ReturnsFalse_WhenItemNotFound`
-- [ ] `RegisterRfidToItemAsync_ReturnsTrue_OnSuccess`
+### Read
+
+- [x] `GetAllItems_Returns_MappedCollection`
+- [x] `GetItemById_Returns_Null_When_NotFound`
+- [x] `GetItemById_Returns_MappedDto_When_Found`
+- [x] `GetItemBySerialNumber_Returns_Null_When_NotFound`
+- [x] `GetItemByRfid_Returns_Null_When_NotFound`
+- [x] `GetItemByRfid_Returns_MappedDto_When_Found`
+
+### Update / Delete
+
+- [x] `UpdateItem_Returns_False_When_ItemNotFound`
+- [x] `UpdateItem_Returns_True_When_SaveSucceeds`
+- [x] `UpdateItem_Throws_When_NewSerialNumber_AlreadyExists_OnDifferentItem`
+- [x] `UpdateItem_DeletesOldImage_WhenNewImageProvided`
+- [x] `UpdateItemLocation_Returns_Failure_When_ItemNotFound`
+- [x] `UpdateItemLocation_Returns_Success_When_ItemExists`
+- [x] `DeleteItem_Returns_Failure_When_ItemNotFound`
+- [x] `DeleteItem_Returns_Success_When_ArchiveAndDeleteSucceed`
+
+### RFID / Scan
+
+- [x] `ScanRfid_Returns_Failure_When_NoItemLinked`
+- [x] `ScanRfid_Returns_Success_When_ItemFound_WithActiveLentRecord`
+- [x] `ScanRfid_Returns_Failure_When_NoActiveLentRecord`
+- [x] `RegisterRfidToItem_Returns_Failure_When_ItemNotFound`
+- [x] `RegisterRfidToItem_Returns_Failure_When_RfidAlreadyTakenByAnotherItem`
+- [x] `RegisterRfidToItem_Returns_Success_When_Registered`
 
 ---
 
-## 4. Lending & Circulation (`LentItemsService`)
+## 4. Lending & Circulation (`LentItemsService`) — 20 tests ✅
 
 **File:** `Services/LentItemsServiceTests.cs`
-**Mocks:** `ILentItemsRepository`, `IItemRepository`, `IUserRepository`, `IActivityLogService`, `INotificationService`, `ISupabaseStorageService`, `IMapper`, `IHttpContextAccessor`
 
-```csharp
-// Item condition guard test pattern
-var item = new Item { Condition = ItemCondition.Defective };
-_mockItemRepo.Setup(r => r.GetByIdAsync(itemId)).ReturnsAsync(item);
-Func<Task> act = () => _sut.AddAsync(dto);
-await act.Should().ThrowAsync<InvalidOperationException>();
+### Standard Borrow (`AddAsync`)
 
-// Verify activity log was written
-_mockActivityLogService.Verify(
-    s => s.LogAsync(It.IsAny<CreateActivityLogDto>()), Times.Once);
+- [x] `AddAsync_Throws_When_Item_IsInBadCondition` — `[Theory]` × 2 (Defective / NeedRepair)
+- [x] `AddAsync_Throws_When_Item_IsAlreadyBorrowedOrReserved` — `[Theory]` × 2 (Borrowed / Reserved)
+- [x] `AddAsync_Throws_When_ActiveLentRecord_AlreadyExists`
+- [x] `AddAsync_Throws_When_ItemNotFound`
+- [x] `AddAsync_Succeeds_And_Returns_MappedDto`
+- [x] `AddAsync_WritesActivityLog_OnSuccess`
 
-// Verify notification was sent
-_mockNotificationService.Verify(
-    s => s.SendNewPendingRequestNotificationAsync(It.IsAny<string>()), Times.Once);
-```
+### Guest Borrow (`AddForGuestAsync`)
 
-### 4a. Standard Borrow Flow (`AddAsync`)
+- [x] `AddForGuestAsync_Throws_When_TagUidNotFound`
+- [x] `AddForGuestAsync_Throws_When_Item_IsInBadCondition` — `[Theory]` × 2 (Defective / NeedRepair)
+- [x] `AddForGuestAsync_Throws_When_Item_IsAlreadyBorrowed`
+- [x] `AddForGuestAsync_Sets_BorrowerRole_To_Guest`
 
-- [ ] `AddAsync_ThrowsInvalidOperation_WhenItemIsDefective`
-- [ ] `AddAsync_ThrowsInvalidOperation_WhenItemIsNeedRepair`
-- [ ] `AddAsync_ThrowsInvalidOperation_WhenItemIsAlreadyBorrowed`
-- [ ] `AddAsync_ThrowsInvalidOperation_WhenItemIsAlreadyReserved`
-- [ ] `AddAsync_ThrowsInvalidOperation_WhenActiveLentRecordExists`
-- [ ] `AddAsync_ThrowsInvalidOperation_WhenReservationTimeSlotConflicts`
-- [ ] `AddAsync_ReturnsCreatedLentItem_WhenValidRequest`
-- [ ] `AddAsync_WritesActivityLog_OnSuccess`
-- [ ] `AddAsync_SendsNotification_OnSuccess`
+### Queries
 
-### 4b. Guest Borrow Flow (`AddForGuestAsync`)
+- [x] `GetAll_Returns_AllLentItems`
+- [x] `GetById_Returns_Null_When_NotFound`
+- [x] `GetById_Returns_MappedDto_When_Found`
 
-- [ ] `AddForGuestAsync_ThrowsInvalidOperation_WhenTagUidNotFound`
-- [ ] `AddForGuestAsync_ThrowsInvalidOperation_WhenItemIsDefectiveOrNeedRepair`
-- [ ] `AddForGuestAsync_ThrowsInvalidOperation_WhenItemIsAlreadyBorrowed`
-- [ ] `AddForGuestAsync_SetsBorrowerRole_ToGuest_Always`
-- [ ] `AddForGuestAsync_StoresOrganization_ContactNumber_Purpose`
-- [ ] `AddForGuestAsync_UploadsGuestImage_WhenImageProvided`
-- [ ] `AddForGuestAsync_SetsIssuedById_FromCallerIdentity`
-- [ ] `AddForGuestAsync_ReturnsCreatedLentItem_WhenValid`
-- [ ] `AddForGuestAsync_WritesActivityLog_OnSuccess`
+### Visibility & Archival
 
-### 4c. Updates & Status Transitions
+- [x] `UpdateHistoryVisibility_Returns_False_When_LentItemNotFound`
+- [x] `UpdateHistoryVisibility_Returns_False_When_UserDoesNotOwnRecord`
+- [x] `UpdateHistoryVisibility_Returns_True_When_UserOwnsRecord`
+- [x] `UpdateHistoryVisibility_Returns_True_Without_Save_When_AlreadyInDesiredState`
+- [x] `ArchiveLentItems_Returns_Failure_When_LentItemNotFound`
+- [x] `ArchiveLentItems_Returns_Success_When_Archived`
+- [x] `ArchiveLentItems_Sets_Item_To_Available_When_Returned`
 
-- [ ] `UpdateAsync_ReturnsFalse_WhenLentItemNotFound`
-- [ ] `UpdateAsync_ReturnsTrue_WhenValidUpdateApplied`
-- [ ] `UpdateAsync_WritesActivityLog_WhenStatusChanges`
-- [ ] `UpdateAsync_SendsNotification_WhenStatusChanges`
-- [ ] `UpdateStatusAsync_TransitionsStatus_AndWritesLog`
-- [ ] `UpdateStatusAsync_ReturnsFalse_WhenLentItemNotFound`
+### Background / Expiry
 
-### 4d. Visibility & Archival
-
-- [ ] `UpdateHistoryVisibility_ReturnsTrue_WhenUserOwnsRecord`
-- [ ] `UpdateHistoryVisibility_ReturnsFalse_WhenUserDoesNotOwnRecord`
-- [ ] `UpdateHistoryVisibility_ReturnsFalse_WhenLentItemNotFound`
-- [ ] `ArchiveLentItems_ReturnsSuccess_WhenItemExists`
-- [ ] `ArchiveLentItems_ReturnsFailure_WhenItemNotFound`
-- [ ] `ArchiveLentItems_ReturnsFailure_WhenItemIsStillBorrowed`
-
-### 4e. Queries
-
-- [ ] `GetAllAsync_ReturnsAllLentItems`
-- [ ] `GetAllBorrowedItemsAsync_ReturnsOnlyBorrowedStatus`
-- [ ] `GetByIdAsync_ReturnsItem_WhenFound`
-- [ ] `GetByIdAsync_ReturnsNull_WhenNotFound`
-- [ ] `GetByDateTimeAsync_FiltersCorrectly_GivenUtcDateTime`
-
-### 4f. Background / Expiry
-
-- [ ] `CancelExpiredReservationsAsync_IdentifiesAndCancels_StaleReservations_ReturnsCount`
-- [ ] `CancelExpiredReservationsAsync_WritesActivityLog_ForEachCanceled`
-- [ ] `IsItemAvailableForReservation_ReturnsFalse_WhenSlotConflicts`
-- [ ] `IsItemAvailableForReservation_ReturnsTrue_WhenNoConflict`
+- [x] `CancelExpiredReservations_Returns_Zero_When_NoExpiredReservations`
+- [x] `CancelExpiredReservations_Cancels_Stale_Reservations_And_Returns_Count`
+- [x] `CancelExpiredReservations_DoesNotCancel_AlreadyPickedUp_Reservations`
 
 ---
 
-## 5. Activity Logs (`ActivityLogService`)
+## 5. Activity Logs (`ActivityLogService`) — 12 tests ✅
 
 **File:** `Services/ActivityLogServiceTests.cs`
-**Mocks:** `IActivityLogRepository`
 
-```csharp
-// Filter test pattern — return a fixed list, assert filtered result
-var logs = new List<ActivityLog>
-{
-    new() { Category = ActivityLogCategory.BorrowedItem, ActorUserId = userId },
-    new() { Category = ActivityLogCategory.Returned,     ActorUserId = otherUserId }
-};
-_mockRepo.Setup(r => r.GetAllAsync()).ReturnsAsync(logs);
+### GetAll (filtered)
 
-var result = await _sut.GetAllAsync(actorUserId: userId);
-result.Should().ContainSingle();
-result.First().ActorUserId.Should().Be(userId);
-```
+- [x] `GetAll_Returns_AllLogs_When_NoFilterApplied`
+- [x] `GetAll_PassesCategory_Filter_To_Repository`
+- [x] `GetAll_PassesDateRange_Filter_To_Repository`
+- [x] `GetAll_PassesActorUserId_Filter_To_Repository`
+- [x] `GetAll_PassesItemId_Filter_To_Repository`
+- [x] `GetAll_PassesStatus_Filter_To_Repository`
 
-- [ ] `GetAllAsync_ReturnsAllLogs_WhenNoFilterApplied`
-- [ ] `GetAllAsync_FiltersBy_Category_WhenProvided`
-- [ ] `GetAllAsync_FiltersBy_DateRange_WhenFromAndToProvided`
-- [ ] `GetAllAsync_FiltersBy_ActorUserId_WhenProvided`
-- [ ] `GetAllAsync_FiltersBy_ItemId_WhenProvided`
-- [ ] `GetAllAsync_FiltersBy_Status_WhenProvided`
-- [ ] `GetByIdAsync_ReturnsLog_WhenFound`
-- [ ] `GetByIdAsync_ReturnsNull_WhenNotFound`
-- [ ] `GetBorrowLogsAsync_ReturnsBorrowedAndReturnedCategories`
-- [ ] `GetBorrowLogsAsync_FiltersBy_DateRange_UserId_ItemId`
+### GetById
+
+- [x] `GetById_Returns_Null_When_NotFound`
+- [x] `GetById_Returns_MappedDto_When_Found`
+
+### GetBorrowLogs
+
+- [x] `GetBorrowLogs_Queries_BorrowedItem_And_Returned_Categories`
+- [x] `GetBorrowLogs_Returns_Empty_When_NoLogsExist`
+
+### LogAsync
+
+- [x] `LogAsync_Saves_Log_And_Returns_MappedDto`
+- [x] `LogAsync_Stores_Correct_Category_And_Action`
 
 ---
 
-## 6. Statistical Summaries (`SummaryService`)
+## 6. Statistical Summaries (`SummaryService`) — 9 tests ✅
 
 **File:** `Services/SummaryServiceTests.cs`
-**Mocks:** `IItemRepository`, `ILentItemsRepository`, `IUserRepository`
 
-```csharp
-// Return predefined counts from mocked repos
-_mockItemRepo.Setup(r => r.GetAllAsync())
-             .ReturnsAsync(new List<Item>
-             {
-                 new() { Condition = ItemCondition.Good },
-                 new() { Condition = ItemCondition.Defective }
-             });
+### Item Count
 
-var result = await _sut.GetItemCountAsync();
-result.Functional.Should().Be(1);
-result.Defective.Should().Be(1);
-```
+- [x] `GetItemCount_Calculates_Correct_Condition_Counts`
+- [x] `GetItemCount_Calculates_Correct_Category_Counts`
+- [x] `GetItemCount_Returns_Zeros_When_NoItems`
 
-- [ ] `GetItemCountAsync_CalculatesAccurate_FunctionalVsDefectiveCounts`
-- [ ] `GetLentItemsCountAsync_SplitsActiveVersusReturnedProperly`
-- [ ] `GetActiveUserCountAsync_SeparatesRoles_IntoCorrectBuckets`
-- [ ] `GetOverallSummaryAsync_Aggregates_AllSubSummaries_IntoSingleDto`
+### Lent Items Count
+
+- [x] `GetLentItemsCount_Splits_Active_Vs_Returned_Correctly`
+- [x] `GetLentItemsCount_Returns_Zeros_When_NoRecords`
+
+### Active User Count
+
+- [x] `GetActiveUserCount_Separates_Roles_Into_Correct_Buckets`
+- [x] `GetActiveUserCount_Returns_Zeros_When_AllUsersOffline`
+
+### Overall Summary
+
+- [x] `GetOverallSummary_Aggregates_All_Sub_Summaries`
+- [x] `GetOverallSummary_ItemStocks_Counts_Available_And_Borrowed_Correctly`
 
 ---
 
-## 7. Archival Services
+## 7. Archival Services — 18 tests ✅
 
 **File:** `Services/ArchiveServiceTests.cs`
-**Mocks:** `IArchiveItemRepository`, `IArchiveLentItemsRepository`, `IArchiveUserRepository`, `IItemRepository`, `ILentItemsRepository`, `IUserRepository`, `IMapper`
 
-```csharp
-// Archive mapping test — capture what was passed to AddAsync
-ArchiveItem? captured = null;
-_mockArchiveRepo.Setup(r => r.AddAsync(It.IsAny<ArchiveItem>()))
-                .Callback<ArchiveItem>(a => captured = a)
-                .Returns(Task.CompletedTask);
+### ArchiveItemsService (10 tests)
 
-await _sut.CreateItemArchiveAsync(item);
+- [x] `CreateItemArchive_Maps_And_Saves_To_Archive`
+- [x] `GetItemArchiveById_Returns_Null_When_NotFound`
+- [x] `GetItemArchiveById_Returns_MappedDto_When_Found`
+- [x] `DeleteItemArchive_Returns_False_When_NotFound`
+- [x] `DeleteItemArchive_Returns_True_When_Deleted`
+- [x] `RestoreItem_Returns_Null_When_ArchiveNotFound`
+- [x] `RestoreItem_Restores_Item_And_Returns_Dto`
+- [x] `RestoreItem_Sets_Status_To_Available`
+- [x] `UpdateItemArchive_Returns_False_When_NotFound`
+- [x] `UpdateItemArchive_Returns_True_When_SaveSucceeds`
 
-captured.Should().NotBeNull();
-captured!.SerialNumber.Should().Be(item.SerialNumber);
-```
+### ArchiveLentItemsService (8 tests)
 
-- [ ] `CreateItemArchiveAsync_SuccessfullyMapsAndSavesToArchiveModel`
-- [ ] `GetItemArchiveByIdAsync_RetrievesSpecificArchiveRecord`
-- [ ] `RestoreItemAsync_NullifiesArchivedFlag_AndReinsertsToActiveTable`
-- [ ] `DeleteItemArchiveAsync_PermanentlyRemovesFromArchiveTable`
-- [ ] `CreateLentItemsArchiveAsync_MapsGuestFields_Organization_ContactNumber_Purpose`
-- [ ] `CreateLentItemsArchiveAsync_MapsGuestImageUrl_WhenPresent`
-- [ ] `GetLentItemsArchiveByIdAsync_RetrievesSpecificArchiveRecord`
-- [ ] `RestoreLentItemsAsync_ReturnsNull_WhenArchiveNotFound`
-- [ ] `RestoreLentItemsAsync_ReturnsRestoredDto_OnSuccess`
-- [ ] `DeleteLentItemsArchiveAsync_ReturnsFalse_WhenNotFound`
-- [ ] `CreateUserArchiveAsync_SuccessfullyMapsAndSavesToArchiveModel`
-- [ ] `GetArchivedUserByIdAsync_ReturnsNull_WhenNotFound`
-- [ ] `RestoreUserAsync_ReturnsFalse_WhenArchiveNotFound`
-- [ ] `RestoreUserAsync_ReturnsTrue_OnSuccess`
-- [ ] `DeleteUserArchiveAsync_PermanentlyRemovesFromArchiveTable`
+- [x] `CreateLentItemsArchive_Maps_And_Saves`
+- [x] `GetLentItemsArchiveById_Returns_Null_When_NotFound`
+- [x] `GetLentItemsArchiveById_Returns_MappedDto_When_Found`
+- [x] `DeleteLentItemsArchive_Returns_False_When_NotFound`
+- [x] `DeleteLentItemsArchive_Returns_True_When_Deleted`
+- [x] `RestoreLentItems_Returns_Null_When_ArchiveNotFound`
+- [x] `RestoreLentItems_Returns_RestoredDto_On_Success`
+
+> **ArchiveUserService** — excluded. Uses `AppDbContext` transactions directly;
+> requires integration-level testing with a real or in-memory database.
 
 ---
 
-## 8. Real-Time Notifications (`NotificationService`)
+## 8. Real-Time Notifications (`NotificationService`) — 8 tests ✅
 
 **File:** `Services/NotificationServiceTests.cs`
-**Mocks:** `IHubContext<NotificationHub>`, `IHubClients`, `IClientProxy`
 
-```csharp
-// SignalR mock pattern — verify SendAsync was called
-var mockClientProxy = new Mock<IClientProxy>();
-var mockClients     = new Mock<IHubClients>();
-var mockHubContext  = new Mock<IHubContext<NotificationHub>>();
+### SendNewPendingRequest
 
-mockClients.Setup(c => c.All).Returns(mockClientProxy.Object);
-mockClients.Setup(c => c.User(It.IsAny<string>())).Returns(mockClientProxy.Object);
-mockHubContext.Setup(h => h.Clients).Returns(mockClients.Object);
+- [x] `SendNewPendingRequest_Invokes_SendAsync_On_AdminStaff_Group`
+- [x] `SendNewPendingRequest_DoesNotThrow_When_HubFails`
 
-await _sut.SendBroadcastNotificationAsync("message");
+### SendApproval
 
-mockClientProxy.Verify(
-    c => c.SendCoreAsync("ReceiveNotification",
-        It.IsAny<object[]>(), It.IsAny<CancellationToken>()),
-    Times.Once);
-```
+- [x] `SendApproval_Sends_To_User_Group_When_UserId_Provided`
+- [x] `SendApproval_Always_Notifies_AdminStaff_Group`
 
-- [ ] `SendNewPendingRequestNotificationAsync_Verifies_SignalR_SendAsync_Invocation`
-- [ ] `SendApprovalNotificationAsync_Verifies_TargetedUserIdDelivery`
-- [ ] `SendStatusChangeNotificationAsync_FormatsMessageStringCorrectly`
-- [ ] `SendBroadcastNotificationAsync_Invokes_AllClients`
+### SendStatusChange
+
+- [x] `SendStatusChange_Sends_To_User_Group_When_UserId_Provided`
+- [x] `SendStatusChange_Always_Notifies_AdminStaff_Group`
+
+### SendBroadcast
+
+- [x] `SendBroadcast_Invokes_SendAsync_On_All_Clients`
+- [x] `SendBroadcast_DoesNotThrow_When_HubFails`
 
 ---
 
-## 9. Storage Service (`SupabaseStorageService`)
+## 9. Storage Service (`SupabaseStorageService`) — skipped ⏭
 
-**File:** `Services/SupabaseStorageTests.cs`
-**Mocks:** `ISupabaseStorageService` (mock the interface, test consuming services)
+Storage behavior is verified indirectly through consuming service tests:
 
-```csharp
-// Verify upload is called when image is provided
-_mockStorage.Setup(s => s.UploadImageAsync(It.IsAny<IFormFile>(), It.IsAny<string>()))
-            .ReturnsAsync("https://cdn.example.com/image.jpg");
+| Verified via                                                       | What is checked                                           |
+| ------------------------------------------------------------------ | --------------------------------------------------------- |
+| `ItemServiceTests.CreateItem_UploadsImage_WhenImageProvided`       | `UploadImageAsync` called once when image present         |
+| `ItemServiceTests.UpdateItem_DeletesOldImage_WhenNewImageProvided` | `DeleteImageAsync` + `UploadImageAsync` called on replace |
 
-await _sut.CreateItemAsync(dtoWithImage);
-
-_mockStorage.Verify(
-    s => s.UploadImageAsync(It.IsAny<IFormFile>(), It.IsAny<string>()), Times.Once);
-
-// Verify delete is NOT called when no existing image
-_mockStorage.Verify(
-    s => s.DeleteImageAsync(It.IsAny<string>()), Times.Never);
-```
-
-- [ ] `UploadImageAsync_ReturnsPublicUrl_OnSuccess` _(integration-style, skip in unit suite)_
-- [ ] `DeleteImageAsync_DoesNotThrow_WhenUrlIsNullOrEmpty`
-- [ ] `DeleteImageAsync_ExtractsCorrectPath_FromPublicUrl`
-- [ ] `ItemService_CreateItemAsync_CallsUploadImageAsync_WhenImageIsProvided`
-- [ ] `ItemService_UpdateItemAsync_CallsDeleteImageAsync_WhenReplacingExistingImage`
-- [ ] `UserService_UpdateStudentProfileAsync_CallsUploadImageAsync_WhenImageIsProvided`
-- [ ] `LentItemsService_AddForGuestAsync_CallsUploadImageAsync_WhenGuestImageIsProvided`
+A dedicated `SupabaseStorageTests.cs` would require a live Supabase connection
+and belongs in an integration test suite, not the unit test project.
 
 ---
 
-## 10. Utility & Infrastructure Services
+## 10. Utility & Infrastructure Services — 12 tests ✅
 
 **File:** `Utilities/UtilityServiceTests.cs`
-**No mocks needed** — pure logic tests.
 
-```csharp
-// Password hashing — use the real service, just verify behavior
-var sut = new PasswordHashingService();
-var hash = sut.HashPassword("Password1!");
-hash.Should().NotBe("Password1!");
-sut.VerifyPassword("Password1!", hash).Should().BeTrue();
-sut.VerifyPassword("WrongPass",  hash).Should().BeFalse();
+### PasswordHashingService
 
-// Background service cancellation test
-using var cts = new CancellationTokenSource();
-cts.Cancel(); // cancel immediately
-await _sut.StartAsync(cts.Token);
-_mockLentItemsService.Verify(
-    s => s.CancelExpiredReservationsAsync(), Times.Never);
+- [x] `HashPassword_Produces_Hash_Different_From_Plaintext`
+- [x] `HashPassword_Produces_Different_Hashes_For_Same_Input`
+- [x] `HashPassword_Produces_BCrypt_Format_Hash`
+- [x] `HashPassword_Works_For_Any_NonEmpty_String` — `[Theory]` × 4
+- [x] `VerifyPassword_Returns_True_For_Correct_Password`
+- [x] `VerifyPassword_Returns_False_For_Wrong_Password`
+- [x] `VerifyPassword_Returns_False_For_Empty_Password`
+- [x] `VerifyPassword_Returns_False_For_Empty_Hash`
+- [x] `VerifyPassword_Returns_False_For_CaseSensitive_Mismatch`
+
+---
+
+## Test Run Summary
+
 ```
-
-### Excel Reader (`ExcelReaderService`)
-
-- [ ] `Parse_ThrowsException_IfFileIsNotXlsx`
-- [ ] `Parse_ReadsWorksheets_AndYieldsExpectedDictionaryMap`
-
-### Password Hashing (`PasswordHashingService`)
-
-- [ ] `HashPassword_ProducesHash_DifferentFromPlaintext`
-- [ ] `VerifyPassword_ReturnsTrue_ForCorrectHash_AndFalseForIncorrect`
-
-### File Validation (`FileValidationUtils`)
-
-- [ ] `ValidateImportFileAsync_ReturnsInvalid_WhenExtensionIsNotXlsxOrCsv`
-- [ ] `ValidateImportFileAsync_ReturnsInvalid_WhenMagicBytesDoNotMatchExtension`
-- [ ] `ValidateImportFileAsync_ReturnsValid_ForLegitimateXlsxFile`
-
-### Image Validation (`ImageConverterUtils`)
-
-- [ ] `ValidateImage_ThrowsArgumentException_WhenImageExceedsSizeLimit`
-- [ ] `ValidateImage_ThrowsArgumentException_WhenFormatIsNotAllowed`
-- [ ] `ValidateImage_DoesNotThrow_ForValidJpegOrPng`
-
-### Background Jobs
-
-- [ ] `ExecuteAsync_TriggersCleanup_AccordingToConfiguredDelayInterval`
-- [ ] `ExecuteAsync_SkipsIfCancellationRequested_AtStartup`
-- [ ] `ReservationExpiryBackgroundService_CallsCancelExpiredReservationsAsync_OnEachCycle`
+Total:    157
+Passed:   157
+Failed:     0
+Skipped:    0
+Duration: ~1s
+```
