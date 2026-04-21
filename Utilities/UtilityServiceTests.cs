@@ -19,7 +19,7 @@ namespace BackendTechincalAssetsManagementTest.Utilities
     /// </summary>
     public class PasswordHashingServiceTests
     {
-        private readonly PasswordHashingService _sut = new();
+        private readonly PasswordHashingService _sut = new(workFactor: 4);
 
         // ══════════════════════════════════════════════════════════════════════
         // HASH PASSWORD
