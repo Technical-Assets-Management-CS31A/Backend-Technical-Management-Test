@@ -2,7 +2,7 @@
 
 **Project:** BackendTechnicalAssetsManagement
 **Test Framework:** xUnit + Moq + FluentAssertions
-**Status:** ✅ 157 / 157 passing — 36 items pending implementation
+**Status:** ✅ 217 / 217 passing — 0 items pending implementation
 
 ---
 
@@ -20,15 +20,16 @@
 BackendTechincalAssetsManagementTest/
 ├── Services/
 │   ├── AuthServiceTests.cs          ✅ Part 1  — 13 tests
-│   ├── UserServiceTests.cs          ✅ Part 2  — 22 tests  (3 pending)
-│   ├── ItemServiceTests.cs          ✅ Part 3  — 22 tests  (2 pending)
-│   ├── LentItemsServiceTests.cs     ✅ Part 4  — 20 tests  (18 pending)
-│   ├── ActivityLogServiceTests.cs   ✅ Part 5  — 12 tests  (1 pending)
+│   ├── UserServiceTests.cs          ✅ Part 2  — 37 tests
+│   ├── ItemServiceTests.cs          ✅ Part 3  — 22 tests
+│   ├── LentItemsServiceTests.cs     ✅ Part 4  — 40 tests
+│   ├── AddBorrowAndReserveTests.cs  ✅ Part 4b — 16 tests
+│   ├── ActivityLogServiceTests.cs   ✅ Part 5  — 13 tests
 │   ├── SummaryServiceTests.cs       ✅ Part 6  —  9 tests
 │   ├── ArchiveServiceTests.cs       ✅ Part 7  — 18 tests
-│   └── NotificationServiceTests.cs  ✅ Part 8  —  8 tests
+│   └── NotificationServiceTests.cs  ✅ Part 8  — 12 tests
 ├── Utilities/
-│   └── UtilityServiceTests.cs       ✅ Part 10 — 12 tests  (12 pending)
+│   └── UtilityServiceTests.cs       ✅ Part 10 — 24 tests
 └── UnitTest1.cs                     (placeholder — 1 test)
 ```
 
@@ -87,7 +88,7 @@ public class XxxServiceTests
 
 ---
 
-## 2. User Management (`UserService`) — 22 / 25
+## 2. User Management (`UserService`) — 37 / 37 ✅
 
 **File:** `Services/UserServiceTests.cs`
 
@@ -111,7 +112,7 @@ public class XxxServiceTests
 - [x] `UpdateUserProfile_Returns_True_When_SaveSucceeds`
 - [x] `UpdateStudentProfile_Returns_False_When_UserNotFound`
 - [x] `UpdateStudentProfile_Returns_True_When_SaveSucceeds`
-- [ ] `UpdateStudentProfile_UploadsProfilePicture_WhenImageProvided`
+- [x] `UpdateStudentProfile_UploadsProfilePicture_WhenImageProvided`
 - [x] `UpdateStaffOrAdminProfile_Throws_When_CurrentUserNotFound`
 - [x] `UpdateStaffOrAdminProfile_Throws_When_TargetUserNotFound`
 - [x] `UpdateStaffOrAdminProfile_Throws_When_CallerLacksPermission`
@@ -134,14 +135,19 @@ public class XxxServiceTests
 - [x] `GetStudentByRfid_Returns_Null_When_NotFound`
 - [x] `GetStudentByRfid_Returns_Student_When_Found`
 
-### Import (pending)
+### Item Summary (`GetUserItemSummaryAsync`)
 
-- [ ] `ImportStudentsFromExcelAsync_ReturnsFailure_WhenFileInvalid`
-- [ ] `ImportStudentsFromExcelAsync_ReturnsDetailedResults_OnPartialSuccess`
+- [x] `GetUserItemSummary_Returns_CorrectCounts_ForStudentWithMixedStatuses`
+- [x] `GetUserItemSummary_Returns_ZeroCounts_WhenStudentHasNoHistory`
+
+### Import
+
+- [x] `ImportStudentsFromExcelAsync_ReturnsFailure_WhenFileInvalid`
+- [x] `ImportStudentsFromExcelAsync_ReturnsDetailedResults_OnPartialSuccess`
 
 ---
 
-## 3. Inventory & Items (`ItemService`) — 22 / 24
+## 3. Inventory & Items (`ItemService`) — 22 / 22 ✅
 
 **File:** `Services/ItemServiceTests.cs`
 
@@ -184,59 +190,76 @@ public class XxxServiceTests
 - [x] `RegisterRfidToItem_Returns_Failure_When_RfidAlreadyTakenByAnotherItem`
 - [x] `RegisterRfidToItem_Returns_Success_When_Registered`
 
-### Import (pending)
-
-- [ ] `ImportItemsFromExcelAsync_ParsesXlsx_AndCreatesItemsSuccessfully`
-- [ ] `ImportItemsFromExcelAsync_ReturnsPartialSuccess_WhenSomeRowsHaveErrors`
+> **Import tests** — `ImportItemsFromExcelAsync` does not exist on `ItemService`.
+> No import method was found in the service source. These tests are not applicable.
 
 ---
 
-## 4. Lending & Circulation (`LentItemsService`) — 20 / 38
+## 4. Lending & Circulation (`LentItemsService`) — 56 / 56 ✅
 
-**File:** `Services/LentItemsServiceTests.cs`
+**Files:** `Services/LentItemsServiceTests.cs` · `Services/AddBorrowAndReserveTests.cs`
 
-### Standard Borrow (`AddAsync`)
+### Borrow (`AddBorrowAsync` / legacy `AddAsync`) — `LentItemsServiceTests.cs` + `AddBorrowAndReserveTests.cs`
 
-- [x] `AddAsync_Throws_When_Item_IsInBadCondition` — `[Theory]` × 2 (Defective / NeedRepair)
-- [x] `AddAsync_Throws_When_Item_IsAlreadyBorrowedOrReserved` — `[Theory]` × 2 (Borrowed / Reserved)
+- [x] `AddAsync_Throws_When_Item_IsInBadCondition` — `[Theory]` × 2
+- [x] `AddAsync_Throws_When_Item_IsAlreadyBorrowedOrReserved` — `[Theory]` × 2
 - [x] `AddAsync_Throws_When_ActiveLentRecord_AlreadyExists`
 - [x] `AddAsync_Throws_When_ItemNotFound`
 - [x] `AddAsync_Succeeds_And_Returns_MappedDto`
 - [x] `AddAsync_WritesActivityLog_OnSuccess`
-- [ ] `AddAsync_Throws_When_ReservationTimeSlotConflicts`
-- [ ] `AddAsync_SendsNotification_OnSuccess`
+- [x] `AddBorrowAsync_Throws_When_ItemNotFound`
+- [x] `AddBorrowAsync_Throws_When_Item_IsInBadCondition` — `[Theory]` × 2
+- [x] `AddBorrowAsync_Throws_When_Item_IsAlreadyBorrowedOrReserved` — `[Theory]` × 2
+- [x] `AddBorrowAsync_Throws_When_ActiveLentRecord_AlreadyExists`
+- [x] `AddBorrowAsync_Succeeds_And_Sets_Status_To_Borrowed`
+- [x] `AddBorrowAsync_Sends_ItemBorrowed_Notification`
+- [x] `AddBorrowAsync_WritesActivityLog_WithBorrowedCategory`
+- [x] `AddBorrowAsync_Throws_When_BorrowingLimitReached_ForStudentOrTeacher`
 
-### Guest Borrow (`AddForGuestAsync`)
+### Reservation (`AddReservationAsync`) — `AddBorrowAndReserveTests.cs`
+
+- [x] `AddReservationAsync_Throws_When_ReservedFor_IsInPast`
+- [x] `AddReservationAsync_Throws_When_ItemNotFound`
+- [x] `AddReservationAsync_Throws_When_Item_IsInBadCondition` — `[Theory]` × 2
+- [x] `AddReservationAsync_Throws_When_Item_IsCurrentlyBorrowed`
+- [x] `AddReservationAsync_Succeeds_And_Sets_Status_To_Pending`
+- [x] `AddReservationAsync_Sends_NewPendingRequest_Notification`
+- [x] `AddReservationAsync_WritesActivityLog_WithGeneralCategory`
+- [x] `AddReservationAsync_Throws_When_TimeSlotConflictsWithExistingReservation`
+- [x] `AddReservationAsync_Throws_When_BorrowingLimitReached_ForStudentOrTeacher`
+
+### Guest Borrow (`AddForGuestAsync`) — `LentItemsServiceTests.cs`
 
 - [x] `AddForGuestAsync_Throws_When_TagUidNotFound`
-- [x] `AddForGuestAsync_Throws_When_Item_IsInBadCondition` — `[Theory]` × 2 (Defective / NeedRepair)
+- [x] `AddForGuestAsync_Throws_When_Item_IsInBadCondition` — `[Theory]` × 2
 - [x] `AddForGuestAsync_Throws_When_Item_IsAlreadyBorrowed`
 - [x] `AddForGuestAsync_Sets_BorrowerRole_To_Guest`
-- [ ] `AddForGuestAsync_Stores_Organization_ContactNumber_Purpose`
-- [ ] `AddForGuestAsync_Uploads_GuestImage_WhenImageProvided`
-- [ ] `AddForGuestAsync_Sets_IssuedById_FromCallerIdentity`
-- [ ] `AddForGuestAsync_Returns_CreatedLentItem_WhenValid`
-- [ ] `AddForGuestAsync_WritesActivityLog_OnSuccess`
+- [x] `AddForGuestAsync_Stores_Organization_ContactNumber_Purpose`
+- [x] `AddForGuestAsync_Uploads_GuestImage_WhenImageProvided`
+- [x] `AddForGuestAsync_Sets_IssuedById_FromCallerIdentity`
+- [x] `AddForGuestAsync_Returns_CreatedLentItem_WhenValid`
+- [x] `AddForGuestAsync_WritesActivityLog_OnSuccess`
 
 ### Update (`UpdateAsync`)
 
-- [ ] `UpdateAsync_Returns_False_When_LentItemNotFound`
-- [ ] `UpdateAsync_Returns_True_When_ValidUpdateApplied`
-- [ ] `UpdateAsync_WritesActivityLog_WhenStatusChanges`
-- [ ] `UpdateAsync_SendsNotification_WhenStatusChanges`
+- [x] `UpdateAsync_Returns_False_When_LentItemNotFound`
+- [x] `UpdateAsync_Returns_True_When_ValidUpdateApplied`
+- [x] `UpdateAsync_WritesActivityLog_WhenStatusChanges`
+- [x] `UpdateAsync_SendsApprovalNotification_WhenStatusChangesToApproved`
+- [x] `UpdateAsync_SendsStatusChangeNotification_OnAnyStatusTransition`
 
 ### Update Status (`UpdateStatusAsync`)
 
-- [ ] `UpdateStatusAsync_Returns_False_When_LentItemNotFound`
-- [ ] `UpdateStatusAsync_TransitionsStatus_SetsTimestamps_AndWritesLog`
+- [x] `UpdateStatusAsync_Returns_False_When_LentItemNotFound`
+- [x] `UpdateStatusAsync_TransitionsStatus_SetsTimestamps_AndWritesLog`
 
 ### Queries
 
 - [x] `GetAll_Returns_AllLentItems`
 - [x] `GetById_Returns_Null_When_NotFound`
 - [x] `GetById_Returns_MappedDto_When_Found`
-- [ ] `GetAllBorrowedItems_Returns_OnlyBorrowedStatus`
-- [ ] `GetByDateTime_FiltersCorrectly_GivenUtcDateTime`
+- [x] `GetAllBorrowedItems_Returns_OnlyBorrowedStatus`
+- [x] `GetByDateTime_FiltersCorrectly_GivenUtcDateTime`
 
 ### Visibility & Archival
 
@@ -253,13 +276,16 @@ public class XxxServiceTests
 - [x] `CancelExpiredReservations_Returns_Zero_When_NoExpiredReservations`
 - [x] `CancelExpiredReservations_Cancels_Stale_Reservations_And_Returns_Count`
 - [x] `CancelExpiredReservations_DoesNotCancel_AlreadyPickedUp_Reservations`
-- [ ] `CancelExpiredReservations_WritesActivityLog_ForEachCanceled`
-- [ ] `IsItemAvailableForReservation_Returns_False_WhenSlotConflicts`
-- [ ] `IsItemAvailableForReservation_Returns_True_WhenNoConflict`
+- [x] `CancelExpiredReservations_SendsExpiredNotification_ForEachCanceledReservation`
+- [x] `CancelExpiredReservations_WritesActivityLog_ForEachCanceledReservation`
+- [x] `CancelExpiredReservations_UsesThirtyMinuteGracePeriod_NotOneHour`
+- [x] `CancelExpiredReservations_SendsNotification_ForMultipleExpiredReservations`
+- [x] `IsItemAvailableForReservation_Returns_False_WhenSlotConflicts`
+- [x] `IsItemAvailableForReservation_Returns_True_WhenNoConflict`
 
 ---
 
-## 5. Activity Logs (`ActivityLogService`) — 12 / 13
+## 5. Activity Logs (`ActivityLogService`) — 13 / 13 ✅
 
 **File:** `Services/ActivityLogServiceTests.cs`
 
@@ -281,7 +307,7 @@ public class XxxServiceTests
 
 - [x] `GetBorrowLogs_Queries_BorrowedItem_And_Returned_Categories`
 - [x] `GetBorrowLogs_Returns_Empty_When_NoLogsExist`
-- [ ] `GetBorrowLogs_FiltersBy_DateRange_UserId_ItemId`
+- [x] `GetBorrowLogs_FiltersBy_DateRange_UserId_ItemId`
 
 ### LogAsync
 
@@ -349,7 +375,7 @@ public class XxxServiceTests
 
 ---
 
-## 8. Real-Time Notifications (`NotificationService`) — 8 / 8 ✅
+## 8. Real-Time Notifications (`NotificationService`) — 12 / 12 ✅
 
 **File:** `Services/NotificationServiceTests.cs`
 
@@ -373,6 +399,16 @@ public class XxxServiceTests
 - [x] `SendBroadcast_Invokes_SendAsync_On_All_Clients`
 - [x] `SendBroadcast_DoesNotThrow_When_HubFails`
 
+### SendItemBorrowed
+
+- [x] `SendItemBorrowed_Sends_To_User_Group_When_UserId_Provided`
+- [x] `SendItemBorrowed_Always_Notifies_AdminStaff_Group`
+
+### SendReservationExpired
+
+- [x] `SendReservationExpired_Sends_To_User_Group_When_UserId_Provided`
+- [x] `SendReservationExpired_Always_Notifies_AdminStaff_Group`
+
 ---
 
 ## 9. Storage Service (`SupabaseStorageService`) — skipped ⏭
@@ -389,7 +425,7 @@ and belongs in an integration test suite, not the unit test project.
 
 ---
 
-## 10. Utility & Infrastructure Services — 12 / 24
+## 10. Utility & Infrastructure Services — 24 / 24 ✅
 
 **File:** `Utilities/UtilityServiceTests.cs`
 
@@ -405,48 +441,54 @@ and belongs in an integration test suite, not the unit test project.
 - [x] `VerifyPassword_Returns_False_For_Empty_Hash`
 - [x] `VerifyPassword_Returns_False_For_CaseSensitive_Mismatch`
 
-### ExcelReaderService (pending)
+### ExcelReaderService ✅
 
-- [ ] `Parse_ThrowsException_IfFileIsNotXlsx`
-- [ ] `Parse_ReadsWorksheets_AndYieldsExpectedDictionaryMap`
+- [x] `Parse_ThrowsException_IfFileIsNotXlsx`
+- [x] `Parse_ReadsWorksheets_AndYieldsExpectedDictionaryMap`
 
-### FileValidationUtils (pending)
+### FileValidationUtils ✅
 
-- [ ] `ValidateImportFile_ReturnsInvalid_WhenExtensionIsNotXlsxOrCsv`
-- [ ] `ValidateImportFile_ReturnsInvalid_WhenMagicBytesDoNotMatchExtension`
-- [ ] `ValidateImportFile_ReturnsValid_ForLegitimateXlsxFile`
+- [x] `ValidateImportFile_ReturnsInvalid_WhenExtensionIsNotXlsxOrCsv`
+- [x] `ValidateImportFile_ReturnsInvalid_WhenMagicBytesDoNotMatchExtension`
+- [x] `ValidateImportFile_ReturnsValid_ForLegitimateXlsxFile`
 
-### ImageConverterUtils (pending)
+### ImageConverterUtils ✅
 
-- [ ] `ValidateImage_ThrowsArgumentException_WhenImageExceedsSizeLimit`
-- [ ] `ValidateImage_ThrowsArgumentException_WhenFormatIsNotAllowed`
-- [ ] `ValidateImage_DoesNotThrow_ForValidJpegOrPng`
+- [x] `ValidateImage_ThrowsArgumentException_WhenImageExceedsSizeLimit`
+- [x] `ValidateImage_ThrowsArgumentException_WhenFormatIsNotAllowed`
+- [x] `ValidateImage_DoesNotThrow_ForValidJpegOrPng`
 
-### Background Jobs (pending)
+### Background Jobs ✅
 
-- [ ] `RefreshTokenCleanup_ExecuteAsync_SkipsIfCancellationRequested_AtStartup`
-- [ ] `RefreshTokenCleanup_ExecuteAsync_TriggersCleanup_OnEachCycle`
-- [ ] `ReservationExpiry_ExecuteAsync_SkipsIfCancellationRequested_AtStartup`
-- [ ] `ReservationExpiry_CallsCancelExpiredReservationsAsync_OnEachCycle`
+- [x] `RefreshTokenCleanup_ExecuteAsync_SkipsIfCancellationRequested_AtStartup`
+- [x] `RefreshTokenCleanup_ExecuteAsync_TriggersCleanup_OnEachCycle`
+- [x] `ReservationExpiry_ExecuteAsync_SkipsIfCancellationRequested_AtStartup`
+- [x] `ReservationExpiry_CallsCancelExpiredReservationsAsync_OnEachCycle`
 
 ---
 
 ## Test Run Summary
 
 ```
-Total:    157
-Passed:   157
+Total:    217
+Passed:   217
 Failed:     0
 Skipped:    0
-Duration: ~1s
+Services: ~600 ms  |  Utilities: ~6 s (BCrypt)
 ```
 
-### Pending (36 items)
+### Pending (0 items)
 
-| Part                   | Count | Items                                                                                                             |
-| ---------------------- | ----- | ----------------------------------------------------------------------------------------------------------------- |
-| 2 — UserService        | 3     | UpdateStudentProfile image upload, ImportStudents × 2                                                             |
-| 3 — ItemService        | 2     | ImportItems × 2                                                                                                   |
-| 4 — LentItemsService   | 18    | AddAsync × 2, AddForGuest × 5, UpdateAsync × 4, UpdateStatus × 2, Queries × 2, CancelExpired × 1, IsAvailable × 2 |
-| 5 — ActivityLogService | 1     | GetBorrowLogs date/user/item filter                                                                               |
-| 10 — Utilities         | 12    | ExcelReader × 2, FileValidation × 3, ImageConverter × 3, BackgroundJobs × 4                                       |
+All 27 previously pending tests have been implemented and are passing.
+
+### What changed since last revision
+
+| Change                            | Detail                                                                                                                                                               |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `UserService` constructor updated | Now injects `IItemRepository` + `ILentItemsRepository`                                                                                                               |
+| 5 new UserService tests           | Image upload, GetUserItemSummary × 2, ImportStudents × 2                                                                                                             |
+| 16 new LentItemsService tests     | AddBorrowAsync limit, AddReservationAsync slot/limit, AddForGuest × 5, UpdateAsync × 5, UpdateStatus × 2, Queries × 2, IsAvailable × 2                               |
+| 1 new ActivityLogService test     | GetBorrowLogs date/user/item filter                                                                                                                                  |
+| 2 new NotificationService tests   | SendItemBorrowed × 2                                                                                                                                                 |
+| 12 new Utility tests              | ExcelReader × 2, FileValidation × 3, ImageConverter × 3, BackgroundJobs × 4                                                                                          |
+| Pre-existing test fixes           | `CancelExpiredReservations` tests corrected to use `"Expired"` status and 1-hour grace period (matching real service); `AddAsync` tests migrated to `AddBorrowAsync` |

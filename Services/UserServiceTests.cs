@@ -9,6 +9,7 @@ using FluentAssertions;
 using Moq;
 using static BackendTechnicalAssetsManagement.src.Classes.Enums;
 using static BackendTechnicalAssetsManagement.src.DTOs.User.UserProfileDtos;
+using Enums = BackendTechnicalAssetsManagement.src.Classes.Enums;
 
 namespace BackendTechincalAssetsManagementTest.Services
 {
@@ -23,12 +24,14 @@ namespace BackendTechincalAssetsManagementTest.Services
     public class UserServiceTests
     {
         // ── Mocks ──────────────────────────────────────────────────────────────
-        private readonly Mock<IUserRepository>      _mockUserRepo;
-        private readonly Mock<IMapper>              _mockMapper;
-        private readonly Mock<IArchiveUserService>  _mockArchiveUserService;
+        private readonly Mock<IUserRepository>         _mockUserRepo;
+        private readonly Mock<IMapper>                 _mockMapper;
+        private readonly Mock<IArchiveUserService>     _mockArchiveUserService;
         private readonly Mock<IPasswordHashingService> _mockPasswordHashing;
-        private readonly Mock<IExcelReaderService>  _mockExcelReader;
+        private readonly Mock<IExcelReaderService>     _mockExcelReader;
         private readonly Mock<ISupabaseStorageService> _mockStorage;
+        private readonly Mock<IItemRepository>         _mockItemRepo;
+        private readonly Mock<ILentItemsRepository>    _mockLentRepo;
 
         private readonly UserService _sut;
 
@@ -40,6 +43,8 @@ namespace BackendTechincalAssetsManagementTest.Services
             _mockPasswordHashing    = new Mock<IPasswordHashingService>();
             _mockExcelReader        = new Mock<IExcelReaderService>();
             _mockStorage            = new Mock<ISupabaseStorageService>();
+            _mockItemRepo           = new Mock<IItemRepository>();
+            _mockLentRepo           = new Mock<ILentItemsRepository>();
 
             _sut = new UserService(
                 _mockUserRepo.Object,
@@ -47,7 +52,9 @@ namespace BackendTechincalAssetsManagementTest.Services
                 _mockArchiveUserService.Object,
                 _mockPasswordHashing.Object,
                 _mockExcelReader.Object,
-                _mockStorage.Object
+                _mockStorage.Object,
+                _mockItemRepo.Object,
+                _mockLentRepo.Object
             );
         }
 
@@ -562,6 +569,156 @@ namespace BackendTechincalAssetsManagementTest.Services
             var result = await _sut.GetStudentByRfidUidAsync("AABBCCDD");
 
             result.Should().NotBeNull();
+        }
+
+        // ══════════════════════════════════════════════════════════════════════
+        // UPDATE STUDENT PROFILE — image upload
+        // ══════════════════════════════════════════════════════════════════════
+
+        [Fact]
+        public async Task UpdateStudentProfile_UploadsProfilePicture_WhenImageProvided()
+        {
+            // Arrange
+            var student = MakeStudent();
+            student.ProfilePictureUrl = "https://cdn.example.com/old.jpg";
+
+            var mockFile = new Mock<Microsoft.AspNetCore.Http.IFormFile>();
+            mockFile.Setup(f => f.Length).Returns(512);
+            mockFile.Setup(f => f.FileName).Returns("photo.jpg");
+            mockFile.Setup(f => f.ContentType).Returns("image/jpeg");
+            mockFile.Setup(f => f.OpenReadStream()).Returns(new MemoryStream(new byte[512]));
+
+            var dto = new UpdateStudentProfileDto { ProfilePicture = mockFile.Object };
+
+            _mockUserRepo.Setup(r => r.GetByIdAsync(student.Id)).ReturnsAsync(student);
+            _mockUserRepo.Setup(r => r.SaveChangesAsync()).ReturnsAsync(true);
+            _mockStorage.Setup(s => s.DeleteImageAsync(It.IsAny<string>())).Returns(Task.CompletedTask);
+            _mockStorage.Setup(s => s.UploadImageAsync(It.IsAny<Microsoft.AspNetCore.Http.IFormFile>(), "students/profile"))
+                        .ReturnsAsync("https://cdn.example.com/new.jpg");
+
+            // Act
+            var result = await _sut.UpdateStudentProfileAsync(student.Id, dto);
+
+            // Assert
+            result.Should().BeTrue();
+            _mockStorage.Verify(s => s.DeleteImageAsync(It.IsAny<string>()), Times.Once);
+            _mockStorage.Verify(s => s.UploadImageAsync(It.IsAny<Microsoft.AspNetCore.Http.IFormFile>(), "students/profile"), Times.Once);
+        }
+
+        // ══════════════════════════════════════════════════════════════════════
+        // GET USER ITEM SUMMARY
+        // ══════════════════════════════════════════════════════════════════════
+
+        [Fact]
+        public async Task GetUserItemSummary_Returns_CorrectCounts_ForStudentWithMixedStatuses()
+        {
+            // Arrange
+            var userId = Guid.NewGuid();
+
+            var lentItems = new List<LentItems>
+            {
+                new() { Id = Guid.NewGuid(), UserId = userId, Status = "Pending" },
+                new() { Id = Guid.NewGuid(), UserId = userId, Status = "Approved" },
+                new() { Id = Guid.NewGuid(), UserId = userId, Status = "Borrowed" },
+                new() { Id = Guid.NewGuid(), UserId = userId, Status = "Returned" },
+                new() { Id = Guid.NewGuid(), UserId = Guid.NewGuid(), Status = "Borrowed" } // different user — excluded
+            };
+
+            var items = new List<Item>
+            {
+                new() { Id = Guid.NewGuid(), Status = Enums.ItemStatus.Available },
+                new() { Id = Guid.NewGuid(), Status = Enums.ItemStatus.Available },
+                new() { Id = Guid.NewGuid(), Status = Enums.ItemStatus.Borrowed }
+            };
+
+            _mockLentRepo.Setup(r => r.GetAllAsync()).ReturnsAsync(lentItems);
+            _mockItemRepo.Setup(r => r.GetAllAsync()).ReturnsAsync(items);
+
+            // Act
+            var result = await _sut.GetUserItemSummaryAsync(userId);
+
+            // Assert — Pending + Approved = 2 reserved, 1 borrowed, 1 returned, 2 available items
+            result.ReservedCount.Should().Be(2);
+            result.BorrowedCount.Should().Be(1);
+            result.ReturnedCount.Should().Be(1);
+            result.AvailableCount.Should().Be(2);
+        }
+
+        [Fact]
+        public async Task GetUserItemSummary_Returns_ZeroCounts_WhenStudentHasNoHistory()
+        {
+            // Arrange
+            var userId = Guid.NewGuid();
+
+            _mockLentRepo.Setup(r => r.GetAllAsync()).ReturnsAsync(Enumerable.Empty<LentItems>());
+            _mockItemRepo.Setup(r => r.GetAllAsync()).ReturnsAsync(Enumerable.Empty<Item>());
+
+            // Act
+            var result = await _sut.GetUserItemSummaryAsync(userId);
+
+            // Assert
+            result.ReservedCount.Should().Be(0);
+            result.BorrowedCount.Should().Be(0);
+            result.ReturnedCount.Should().Be(0);
+            result.AvailableCount.Should().Be(0);
+        }
+
+        // ══════════════════════════════════════════════════════════════════════
+        // IMPORT STUDENTS FROM EXCEL
+        // ══════════════════════════════════════════════════════════════════════
+
+        [Fact]
+        public async Task ImportStudentsFromExcelAsync_ReturnsFailure_WhenFileInvalid()
+        {
+            // Arrange
+            var mockFile = new Mock<Microsoft.AspNetCore.Http.IFormFile>();
+            var emptyStudents = new List<(string, string, string?, int)>();
+
+            _mockExcelReader
+                .Setup(r => r.ReadStudentsFromExcelAsync(mockFile.Object))
+                .ReturnsAsync((emptyStudents, "Excel file must contain 'LastName' and 'FirstName' columns."));
+
+            // Act
+            var result = await _sut.ImportStudentsFromExcelAsync(mockFile.Object);
+
+            // Assert
+            result.Errors.Should().ContainSingle()
+                .Which.Should().Contain("LastName");
+            result.FailureCount.Should().Be(0); // empty list, so 0 processed
+        }
+
+        [Fact]
+        public async Task ImportStudentsFromExcelAsync_ReturnsDetailedResults_OnPartialSuccess()
+        {
+            // Arrange
+            var mockFile = new Mock<Microsoft.AspNetCore.Http.IFormFile>();
+
+            // One valid row, one row with empty FirstName
+            var students = new List<(string FirstName, string LastName, string? MiddleName, int RowNumber)>
+            {
+                ("Juan",   "Dela Cruz", null, 2),
+                ("",       "Santos",    null, 3)  // invalid — empty first name
+            };
+
+            _mockExcelReader
+                .Setup(r => r.ReadStudentsFromExcelAsync(mockFile.Object))
+                .ReturnsAsync((students, null));
+
+            // Repo: no existing user with same name
+            _mockUserRepo.Setup(r => r.GetAllAsync()).ReturnsAsync(Enumerable.Empty<User>());
+            _mockUserRepo.Setup(r => r.GetByUsernameAsync(It.IsAny<string>())).ReturnsAsync((User?)null);
+            _mockUserRepo.Setup(r => r.AddAsync(It.IsAny<User>())).ReturnsAsync(new User());
+            _mockUserRepo.Setup(r => r.SaveChangesAsync()).ReturnsAsync(true);
+            _mockPasswordHashing.Setup(p => p.HashPassword(It.IsAny<string>())).Returns("hashed");
+
+            // Act
+            var result = await _sut.ImportStudentsFromExcelAsync(mockFile.Object);
+
+            // Assert
+            result.SuccessCount.Should().Be(1);
+            result.FailureCount.Should().Be(1);
+            result.Errors.Should().ContainSingle()
+                .Which.Should().Contain("Row 3");
         }
     }
 }

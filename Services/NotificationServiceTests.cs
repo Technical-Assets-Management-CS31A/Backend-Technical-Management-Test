@@ -159,5 +159,46 @@ namespace BackendTechincalAssetsManagementTest.Services
 
             await act.Should().NotThrowAsync();
         }
+
+        // ══════════════════════════════════════════════════════════════════════
+        // SEND ITEM BORROWED NOTIFICATION
+        // ══════════════════════════════════════════════════════════════════════
+
+        [Fact]
+        public async Task SendItemBorrowed_Sends_To_User_Group_When_UserId_Provided()
+        {
+            // Arrange
+            var userId = Guid.NewGuid();
+
+            // Act
+            await _sut.SendItemBorrowedNotificationAsync(Guid.NewGuid(), userId, "Projector", "Juan");
+
+            // Assert
+            _mockClients.Verify(c => c.Group($"user_{userId}"), Times.Once);
+            _mockGroupProxy.Verify(
+                p => p.SendCoreAsync(
+                    "ReceiveItemBorrowed",
+                    It.IsAny<object[]>(),
+                    It.IsAny<CancellationToken>()),
+                Times.AtLeast(1));
+        }
+
+        [Fact]
+        public async Task SendItemBorrowed_Always_Notifies_AdminStaff_Group()
+        {
+            // Arrange — no userId, so only admin_staff should be notified
+
+            // Act
+            await _sut.SendItemBorrowedNotificationAsync(Guid.NewGuid(), null, "Projector", "Juan");
+
+            // Assert
+            _mockClients.Verify(c => c.Group("admin_staff"), Times.Once);
+            _mockGroupProxy.Verify(
+                p => p.SendCoreAsync(
+                    "ReceiveItemBorrowed",
+                    It.IsAny<object[]>(),
+                    It.IsAny<CancellationToken>()),
+                Times.Once);
+        }
     }
 }

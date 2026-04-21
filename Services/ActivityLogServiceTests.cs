@@ -283,5 +283,41 @@ namespace BackendTechincalAssetsManagementTest.Services
             captured.NewStatus.Should().Be("Returned");
             captured.PreviousStatus.Should().Be("Borrowed");
         }
+
+        // ══════════════════════════════════════════════════════════════════════
+        // GET BORROW LOGS — date/user/item filter
+        // ══════════════════════════════════════════════════════════════════════
+
+        [Fact]
+        public async Task GetBorrowLogs_FiltersBy_DateRange_UserId_ItemId()
+        {
+            // Arrange
+            var from   = DateTime.UtcNow.AddDays(-7);
+            var to     = DateTime.UtcNow;
+            var userId = Guid.NewGuid();
+            var itemId = Guid.NewGuid();
+
+            var borrowedLogs = new List<ActivityLog> { MakeLog(ActivityLogCategory.BorrowedItem, actorId: userId, itemId: itemId) };
+            var returnedLogs = new List<ActivityLog> { MakeLog(ActivityLogCategory.Returned,     actorId: userId, itemId: itemId) };
+
+            _mockRepo.Setup(r => r.GetFilteredAsync(
+                ActivityLogCategory.BorrowedItem, from, to, userId, itemId, null))
+                     .ReturnsAsync(borrowedLogs);
+            _mockRepo.Setup(r => r.GetFilteredAsync(
+                ActivityLogCategory.Returned, from, to, userId, itemId, null))
+                     .ReturnsAsync(returnedLogs);
+            _mockMapper.Setup(m => m.Map<IEnumerable<BorrowLogDto>>(It.IsAny<IEnumerable<ActivityLog>>()))
+                       .Returns(new List<BorrowLogDto> { new(), new() });
+
+            // Act
+            var result = await _sut.GetBorrowLogsAsync(from, to, userId, itemId);
+
+            // Assert
+            result.Should().HaveCount(2);
+            _mockRepo.Verify(r => r.GetFilteredAsync(
+                ActivityLogCategory.BorrowedItem, from, to, userId, itemId, null), Times.Once);
+            _mockRepo.Verify(r => r.GetFilteredAsync(
+                ActivityLogCategory.Returned, from, to, userId, itemId, null), Times.Once);
+        }
     }
 }
