@@ -368,13 +368,15 @@ namespace BackendTechincalAssetsManagementTest.Services
             MockHttpContextWithClaims(userId, "Student");
 
             _mockUserRepo.Setup(r => r.GetByIdAsync(userId)).ReturnsAsync(user);
+            // OldPassword is required when changing own password — mock verify to pass
+            _mockPasswordHashing.Setup(p => p.VerifyPassword("OldPass1!", It.IsAny<string>())).Returns(true);
             _mockPasswordHashing.Setup(p => p.HashPassword("NewPass1!")).Returns("new_hash");
             _mockUserRepo.Setup(r => r.UpdateAsync(user)).Returns(Task.CompletedTask);
             _mockRefreshTokenRepo.Setup(r => r.RevokeAllForUserAsync(userId)).Returns(Task.CompletedTask);
             _mockUserRepo.Setup(r => r.SaveChangesAsync()).ReturnsAsync(true);
 
             await _sut.ChangePassword(userId,
-                new ChangePasswordDto { NewPassword = "NewPass1!", ConfirmPassword = "NewPass1!" });
+                new ChangePasswordDto { OldPassword = "OldPass1!", NewPassword = "NewPass1!", ConfirmPassword = "NewPass1!" });
 
             user.PasswordHash.Should().Be("new_hash");
             _mockRefreshTokenRepo.Verify(r => r.RevokeAllForUserAsync(userId), Times.Once);

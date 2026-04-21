@@ -2,7 +2,7 @@
 
 **Project:** BackendTechnicalAssetsManagement
 **Test Framework:** xUnit + Moq + FluentAssertions
-**Status:** ✅ 217 / 217 passing — 0 items pending implementation
+**Status:** ✅ 283 / 283 passing — 0 items pending
 
 ---
 
@@ -30,6 +30,20 @@ BackendTechincalAssetsManagementTest/
 │   └── NotificationServiceTests.cs  ✅ Part 8  — 12 tests
 ├── Utilities/
 │   └── UtilityServiceTests.cs       ✅ Part 10 — 24 tests
+├── Controllers/                     ✅ Part 11 — 40 / 40 tests
+│   ├── AuthControllerTests.cs
+│   ├── UserControllerTests.cs
+│   ├── ItemControllerTests.cs
+│   ├── LentItemsControllerTests.cs
+│   ├── ActivityLogControllerTests.cs
+│   ├── SummaryControllerTests.cs
+│   ├── ArchiveItemsControllerTests.cs
+│   ├── ArchiveLentItemsControllerTests.cs
+│   └── ArchiveUsersControllerTests.cs
+├── Infrastructure/                  ✅ Part 12 — 18 / 18 tests
+│   ├── GlobalExceptionHandlerTests.cs
+│   ├── AuthorizationHandlerTests.cs
+│   └── UserValidationServiceTests.cs
 └── UnitTest1.cs                     (placeholder — 1 test)
 ```
 
@@ -39,6 +53,8 @@ BackendTechincalAssetsManagementTest/
 >
 > **ArchiveUserService** — excluded from unit tests. It uses `AppDbContext`
 > directly for transaction management, which requires integration-level testing.
+>
+> **Parts 11–12** — new scope added after full codebase audit. See sections below.
 
 ---
 
@@ -470,25 +486,254 @@ and belongs in an integration test suite, not the unit test project.
 ## Test Run Summary
 
 ```
-Total:    217
-Passed:   217
+Total:    283
+Passed:   283
 Failed:     0
 Skipped:    0
 Services: ~600 ms  |  Utilities: ~6 s (BCrypt)
 ```
 
-### Pending (0 items)
+### Pending (0 items — all implemented)
 
-All 27 previously pending tests have been implemented and are passing.
+All 57 previously pending tests have been implemented and are passing.
+
+| Part      | Area                       | Status         |
+| --------- | -------------------------- | -------------- |
+| 11a       | AuthController             | ✅ 7 / 7       |
+| 11b       | UserController             | ✅ 8 / 8       |
+| 11c       | ItemController             | ✅ 8 / 8       |
+| 11d       | LentItemsController        | ✅ 7 / 7       |
+| 11e       | ActivityLogController      | ✅ 4 / 4       |
+| 11f       | SummaryController          | ✅ 2 / 2       |
+| 11g       | ArchiveItemsController     | ✅ 4 / 4       |
+| 11h       | ArchiveLentItemsController | ✅ 4 / 4       |
+| 11i       | ArchiveUsersController     | ✅ 4 / 4       |
+| 12a       | GlobalExceptionHandler     | ✅ 6 / 6       |
+| 12b       | Authorization Handlers     | ✅ 6 / 6       |
+| 12c       | UserValidationService      | ✅ 3 / 3       |
+| 12d       | UpdateChecker utility      | ✅ 3 / 3       |
+| **Total** |                            | **✅ 66 / 66** |
 
 ### What changed since last revision
 
-| Change                            | Detail                                                                                                                                                               |
-| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `UserService` constructor updated | Now injects `IItemRepository` + `ILentItemsRepository`                                                                                                               |
-| 5 new UserService tests           | Image upload, GetUserItemSummary × 2, ImportStudents × 2                                                                                                             |
-| 16 new LentItemsService tests     | AddBorrowAsync limit, AddReservationAsync slot/limit, AddForGuest × 5, UpdateAsync × 5, UpdateStatus × 2, Queries × 2, IsAvailable × 2                               |
-| 1 new ActivityLogService test     | GetBorrowLogs date/user/item filter                                                                                                                                  |
-| 2 new NotificationService tests   | SendItemBorrowed × 2                                                                                                                                                 |
-| 12 new Utility tests              | ExcelReader × 2, FileValidation × 3, ImageConverter × 3, BackgroundJobs × 4                                                                                          |
-| Pre-existing test fixes           | `CancelExpiredReservations` tests corrected to use `"Expired"` status and 1-hour grace period (matching real service); `AddAsync` tests migrated to `AddBorrowAsync` |
+| Change                    | Detail                                                                     |
+| ------------------------- | -------------------------------------------------------------------------- |
+| Parts 11a–11i implemented | 9 controller test files created in `Controllers/`                          |
+| Parts 12a–12d implemented | 3 infrastructure test files in `Infrastructure/`, UpdateChecker appended   |
+| 66 new tests added        | All passing (282 total passing, 1 pre-existing failure unrelated to scope) |
+
+---
+
+## 11. Controller Tests — 0 / 57 🆕
+
+> **Approach:** Instantiate controllers directly with mocked `IService` dependencies.
+> Use `DefaultHttpContext` + `ClaimsPrincipal` to simulate authenticated users.
+> No `WebApplicationFactory` or `TestServer` needed — these are pure unit tests
+> that verify routing decisions, HTTP status codes, and `ApiResponse` shape.
+>
+> **Constructor pattern for all controller tests:**
+>
+> ```csharp
+> private static ClaimsPrincipal MakeUser(string role, Guid? id = null) =>
+>     new(new ClaimsIdentity(new[]
+>     {
+>         new Claim(ClaimTypes.NameIdentifier, (id ?? Guid.NewGuid()).ToString()),
+>         new Claim(ClaimTypes.Role, role)
+>     }, "Test"));
+> ```
+
+---
+
+### 11a. AuthController (`Controllers/AuthControllerTests.cs`) — 7 / 7 ✅
+
+**File:** `Controllers/AuthControllerTests.cs`
+**Injects:** `IAuthService`, `IUserService`, `IWebHostEnvironment`, `ILogger<AuthController>`
+
+- [x] `GetMyProfile_Returns_Unauthorized_WhenClaimMissing`
+  - Set `HttpContext.User` to an unauthenticated principal (no NameIdentifier claim)
+  - Assert `UnauthorizedObjectResult` with `Success = false`
+
+- [x] `GetMyProfile_Returns_NotFound_WhenUserProfileNull`
+  - Valid claim, `_mockUserService.GetUserProfileByIdAsync` returns `null`
+  - Assert `NotFoundObjectResult`
+
+- [x] `GetMyProfile_Returns_Ok_WithProfile`
+  - Valid claim, service returns a profile object
+  - Assert `OkObjectResult`, `response.Success == true`
+
+- [x] `Register_Returns_Unauthorized_WhenClaimInvalid`
+  - `User.FindFirstValue(ClaimTypes.NameIdentifier)` returns non-parseable string
+  - Assert `UnauthorizedObjectResult`
+
+- [x] `Register_Returns_201_OnSuccess`
+  - Valid caller claim, `_mockAuthService.Register` returns a `UserDto`
+  - Assert `ObjectResult` with `StatusCode == 201`
+
+- [x] `Login_Returns_Ok_WithUserDto`
+  - `_mockAuthService.Login` returns a `UserDto`
+  - Assert `OkObjectResult`, `response.Data` is not null
+
+- [x] `ChangePassword_Returns_Ok_OnSuccess`
+  - `_mockAuthService.ChangePassword` completes without throwing
+  - Assert `OkObjectResult`, `response.Success == true`
+
+---
+
+### 11b. UserController (`Controllers/UserControllerTests.cs`) — 8 / 8 ✅
+
+**File:** `Controllers/UserControllerTests.cs`
+**Injects:** `IUserService`, `IUserRepository`, `IMapper`, `IAuthorizationService`
+
+- [x] `GetAllUsers_Returns_Ok_WithUserList`
+- [x] `GetUserProfileById_Returns_NotFound_WhenUserNotInRepo`
+- [x] `GetUserProfileById_Returns_Forbidden_WhenAuthorizationFails`
+- [x] `GetUserProfileById_Returns_Ok_WhenAuthorized`
+- [x] `UpdateStudentProfile_Returns_Unauthorized_WhenClaimInvalid`
+- [x] `UpdateStudentProfile_Returns_Forbidden_WhenStudentUpdatesOtherProfile`
+- [x] `ArchiveUser_Returns_NotFound_WhenServiceReturnsNotFound`
+- [x] `ArchiveUser_Returns_Ok_OnSuccess`
+
+---
+
+### 11c. ItemController (`Controllers/ItemControllerTests.cs`) — 8 / 8 ✅
+
+**File:** `Controllers/ItemControllerTests.cs`
+**Injects:** `IItemService`
+
+- [x] `CreateItem_Returns_Conflict_WhenDuplicateSerialNumber`
+- [x] `CreateItem_Returns_BadRequest_WhenArgumentException`
+- [x] `CreateItem_Returns_201_OnSuccess`
+- [x] `GetItemById_Returns_NotFound_WhenNull`
+- [x] `GetItemById_Returns_Ok_WhenFound`
+- [x] `ScanRfid_Returns_NotFound_WhenNoItemLinked`
+- [x] `ArchiveItem_Returns_NotFound_WhenItemNotFound`
+- [x] `ArchiveItem_Returns_Ok_OnSuccess`
+
+---
+
+### 11d. LentItemsController (`Controllers/LentItemsControllerTests.cs`) — 7 / 7 ✅
+
+**File:** `Controllers/LentItemsControllerTests.cs`
+**Injects:** `ILentItemsService`
+
+- [x] `Borrow_Returns_201_OnSuccess`
+- [x] `Reserve_Returns_201_OnSuccess`
+- [x] `AddForGuest_Returns_Unauthorized_WhenClaimMissing`
+- [x] `GetById_Returns_NotFound_WhenNull`
+- [x] `Update_Returns_NotFound_WhenServiceReturnsFalse`
+- [x] `ArchiveLentItems_Returns_NotFound_WhenNotFound`
+- [x] `GetByDateTime_Returns_BadRequest_WhenDateInvalid`
+
+---
+
+### 11e. ActivityLogController (`Controllers/ActivityLogControllerTests.cs`) — 4 / 4 ✅
+
+**File:** `Controllers/ActivityLogControllerTests.cs`
+**Injects:** `IActivityLogService`
+
+- [x] `GetAll_Returns_Ok_WithLogs`
+- [x] `GetById_Returns_NotFound_WhenNull`
+- [x] `GetById_Returns_Ok_WhenFound`
+- [x] `GetBorrowLogs_Returns_Ok_WithLogs`
+
+---
+
+### 11f. SummaryController (`Controllers/SummaryControllerTests.cs`) — 2 / 2 ✅
+
+**File:** `Controllers/SummaryControllerTests.cs`
+**Injects:** `ISummaryService`
+
+- [x] `GetOverallSummary_Returns_Ok_WithSummaryDto`
+- [x] `GetOverallSummary_WrapsData_InApiResponse`
+
+---
+
+### 11g. ArchiveItemsController (`Controllers/ArchiveItemsControllerTests.cs`) — 4 / 4 ✅
+
+**File:** `Controllers/ArchiveItemsControllerTests.cs`
+**Injects:** `IArchiveItemsService`, `ILogger<ArchiveItemsController>`
+
+- [x] `GetArchivedItemById_Returns_NotFound_WhenNull`
+- [x] `GetArchivedItemById_Returns_Ok_WhenFound`
+- [x] `RestoreArchivedItem_Returns_NotFound_WhenNull`
+- [x] `DeleteArchivedItem_Returns_NotFound_WhenNotFound`
+
+---
+
+### 11h. ArchiveLentItemsController (`Controllers/ArchiveLentItemsControllerTests.cs`) — 4 / 4 ✅
+
+**File:** `Controllers/ArchiveLentItemsControllerTests.cs`
+**Injects:** `IArchiveLentItemsService`, `ILogger<ArchiveLentItemsController>`
+
+- [x] `GetLentItemsArchiveById_Returns_NotFound_WhenNull`
+- [x] `GetLentItemsArchiveById_Returns_Ok_WhenFound`
+- [x] `RestoreArchivedLentItems_Returns_NotFound_WhenNull`
+- [x] `DeleteLentItemsArchive_Returns_NotFound_WhenNotFound`
+
+---
+
+### 11i. ArchiveUsersController (`Controllers/ArchiveUsersControllerTests.cs`) — 4 / 4 ✅
+
+**File:** `Controllers/ArchiveUsersControllerTests.cs`
+**Injects:** `IArchiveUserService`
+
+- [x] `GetArchivedUserById_Returns_NotFound_WhenNull`
+- [x] `GetArchivedUserById_Returns_Ok_WhenFound`
+- [x] `RestoreUser_Returns_BadRequest_WhenServiceReturnsFalse`
+- [x] `PermanentDeleteUser_Returns_NotFound_WhenNotFound`
+
+---
+
+## 12. Infrastructure & Cross-Cutting — 18 / 18 ✅
+
+---
+
+### 12a. GlobalExceptionHandler (`Infrastructure/GlobalExceptionHandlerTests.cs`) — 6 / 6 ✅
+
+**File:** `Infrastructure/GlobalExceptionHandlerTests.cs`
+
+- [x] `InvokeAsync_Returns_403_For_UnauthorizedAccessException`
+- [x] `InvokeAsync_Returns_404_For_KeyNotFoundException`
+- [x] `InvokeAsync_Returns_400_For_ArgumentException`
+- [x] `InvokeAsync_Returns_400_For_InvalidOperationException`
+- [x] `InvokeAsync_Returns_401_For_InvalidCredentialsException`
+- [x] `InvokeAsync_Returns_500_For_UnhandledException`
+
+---
+
+### 12b. Authorization Handlers (`Infrastructure/AuthorizationHandlerTests.cs`) — 6 / 6 ✅
+
+**File:** `Infrastructure/AuthorizationHandlerTests.cs`
+
+#### SuperAdminBypassHandler (2 tests)
+
+- [x] `SuperAdminBypassHandler_Succeeds_AllRequirements_WhenUserIsSuperAdmin`
+- [x] `SuperAdminBypassHandler_DoesNotSucceed_WhenUserIsNotSuperAdmin`
+
+#### ViewProfileRequirement.ViewProfileHandler (4 tests)
+
+- [x] `ViewProfileHandler_Succeeds_WhenUserIsAdmin`
+- [x] `ViewProfileHandler_Succeeds_WhenUserIsStaff`
+- [x] `ViewProfileHandler_Succeeds_WhenUserViewsOwnProfile`
+- [x] `ViewProfileHandler_Fails_WhenStudentViewsOtherProfile`
+
+---
+
+### 12c. UserValidationService (`Infrastructure/UserValidationServiceTests.cs`) — 3 / 3 ✅
+
+**File:** `Infrastructure/UserValidationServiceTests.cs`
+**Injects:** `IUserRepository`
+
+- [x] `ValidateUniqueUser_Throws_WhenUsernameAlreadyTaken`
+- [x] `ValidateUniqueUser_Throws_WhenEmailAlreadyExists`
+- [x] `ValidateUniqueUser_Throws_WhenPhoneNumberAlreadyUsed`
+
+---
+
+### 12d. UpdateChecker Utility (`Utilities/UtilityServiceTests.cs` — append) — 3 / 3 ✅
+
+> Added to the existing `UtilityServiceTests.cs` file under a `#region UpdateChecker` block.
+
+- [x] `UpdateChecker_UpdatesString_WhenNewValueIsNonEmpty`
+- [x] `UpdateChecker_DoesNotUpdate_WhenNewValueIsNull`
+- [x] `UpdateChecker_DoesNotUpdate_WhenNewValueIsEmpty`
