@@ -443,3 +443,58 @@ namespace BackendTechincalAssetsManagementTest.Utilities
         }
     }
 }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // UPDATE CHECKER UTILITY
+    // ══════════════════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Part 12d — UpdateChecker utility
+    /// Pure static method calls — no mocks needed.
+    /// Max per-test: 200 ms.
+    /// </summary>
+    public class UpdateCheckerTests
+    {
+        #region UpdateChecker
+
+        [Fact]
+        public void UpdateChecker_UpdatesString_WhenNewValueIsNonEmpty()
+        {
+            // Arrange
+            var existing = "old";
+
+            // Act
+            UpdateChecker.UpdatePropertyIfProvided(ref existing, "new");
+
+            // Assert
+            existing.Should().Be("new");
+        }
+
+        [Fact]
+        public void UpdateChecker_DoesNotUpdate_WhenNewValueIsNull()
+        {
+            // Arrange
+            var existing = "old";
+
+            // Act
+            UpdateChecker.UpdatePropertyIfProvided(ref existing, null);
+
+            // Assert
+            existing.Should().Be("old");
+        }
+
+        [Fact]
+        public void UpdateChecker_DoesNotUpdate_WhenNewValueIsEmpty()
+        {
+            // Arrange
+            var existing = "old";
+
+            // Act
+            UpdateChecker.UpdatePropertyIfProvided(ref existing, string.Empty);
+
+            // Assert
+            existing.Should().Be("old");
+        }
+
+        #endregion
+    }
