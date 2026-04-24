@@ -2,7 +2,7 @@
 
 **Project:** BackendTechnicalAssetsManagement
 **Test Framework:** xUnit + Moq + FluentAssertions
-**Status:** ✅ 283 / 283 passing — 0 items pending
+**Status:** ✅ 283 passing — 🆕 36 pending (audit: April 2026)
 
 ---
 
@@ -30,21 +30,24 @@ BackendTechincalAssetsManagementTest/
 │   └── NotificationServiceTests.cs  ✅ Part 8  — 12 tests
 ├── Utilities/
 │   └── UtilityServiceTests.cs       ✅ Part 10 — 24 tests
-├── Controllers/                     ✅ Part 11 — 40 / 40 tests
-│   ├── AuthControllerTests.cs
-│   ├── UserControllerTests.cs
-│   ├── ItemControllerTests.cs
-│   ├── LentItemsControllerTests.cs
-│   ├── ActivityLogControllerTests.cs
-│   ├── SummaryControllerTests.cs
-│   ├── ArchiveItemsControllerTests.cs
-│   ├── ArchiveLentItemsControllerTests.cs
-│   └── ArchiveUsersControllerTests.cs
+├── Controllers/                     ⚠️  Part 11 — 40 / 76 tests (36 pending)
+│   ├── AuthControllerTests.cs           ✅ 7 / 11
+│   ├── UserControllerTests.cs           ✅ 8 / 14
+│   ├── ItemControllerTests.cs           ✅ 8 / 15
+│   ├── LentItemsControllerTests.cs      ✅ 7 / 11
+│   ├── ActivityLogControllerTests.cs    ✅ 4 / 4
+│   ├── SummaryControllerTests.cs        ✅ 2 / 2
+│   ├── ArchiveItemsControllerTests.cs   ✅ 4 / 4
+│   ├── ArchiveLentItemsControllerTests.cs ✅ 4 / 4
+│   └── ArchiveUsersControllerTests.cs   ✅ 4 / 4
 ├── Infrastructure/                  ✅ Part 12 — 18 / 18 tests
 │   ├── GlobalExceptionHandlerTests.cs
 │   ├── AuthorizationHandlerTests.cs
-│   └── UserValidationServiceTests.cs
-└── UnitTest1.cs                     (placeholder — 1 test)
+│   ├── UserValidationServiceTests.cs
+│   └── RefreshTokenMiddlewareTests.cs   🆕 Part 13 — 0 / 5 pending
+├── Services/
+│   └── ItemServiceTests.cs              ⚠️  Part 3 — 22 / 27 (5 pending — import)
+└── UnitTest1.cs                         (placeholder — 1 test)
 ```
 
 > **Part 9 (SupabaseStorageService)** — skipped as a standalone file.
@@ -206,8 +209,9 @@ public class XxxServiceTests
 - [x] `RegisterRfidToItem_Returns_Failure_When_RfidAlreadyTakenByAnotherItem`
 - [x] `RegisterRfidToItem_Returns_Success_When_Registered`
 
-> **Import tests** — `ImportItemsFromExcelAsync` does not exist on `ItemService`.
-> No import method was found in the service source. These tests are not applicable.
+> **Import tests** — `ImportItemsFromExcelAsync` **does exist** on `ItemService` (confirmed via source audit, April 2026).
+> The method reads an XLSX stream via `ExcelReaderFactory`, validates serial numbers, checks for duplicates,
+> and bulk-saves via `_itemRepository.AddRangeAsync`. Tests are pending — see **Part 3 (pending)** below.
 
 ---
 
@@ -493,93 +497,170 @@ Skipped:    0
 Services: ~600 ms  |  Utilities: ~6 s (BCrypt)
 ```
 
-### Pending (0 items — all implemented)
+### Pending (36 items — audit April 2026)
 
-All 57 previously pending tests have been implemented and are passing.
+| Part       | Area                                                 | Pending |
+| ---------- | ---------------------------------------------------- | ------- |
+| 3 (import) | ItemService — `ImportItemsFromExcelAsync`            | 5       |
+| 11a        | AuthController — mobile login, logout, refresh       | 4       |
+| 11b        | UserController — teacher profile, import, RFID       | 6       |
+| 11c        | ItemController — serial, RFID, location, import      | 7       |
+| 11d        | LentItemsController — GetAll, borrowed, update, hide | 4       |
+| 13         | RefreshTokenMiddleware                               | 5       |
+| 14         | HealthController                                     | 2       |
+| **Total**  |                                                      | **33**  |
 
-| Part      | Area                       | Status         |
-| --------- | -------------------------- | -------------- |
-| 11a       | AuthController             | ✅ 7 / 7       |
-| 11b       | UserController             | ✅ 8 / 8       |
-| 11c       | ItemController             | ✅ 8 / 8       |
-| 11d       | LentItemsController        | ✅ 7 / 7       |
-| 11e       | ActivityLogController      | ✅ 4 / 4       |
-| 11f       | SummaryController          | ✅ 2 / 2       |
-| 11g       | ArchiveItemsController     | ✅ 4 / 4       |
-| 11h       | ArchiveLentItemsController | ✅ 4 / 4       |
-| 11i       | ArchiveUsersController     | ✅ 4 / 4       |
-| 12a       | GlobalExceptionHandler     | ✅ 6 / 6       |
-| 12b       | Authorization Handlers     | ✅ 6 / 6       |
-| 12c       | UserValidationService      | ✅ 3 / 3       |
-| 12d       | UpdateChecker utility      | ✅ 3 / 3       |
-| **Total** |                            | **✅ 66 / 66** |
+> Note: count above is 33 not 36 — the project structure header shows 36 because it counts
+> the 3 extra `UpdateChecker` tests that were already appended to `UtilityServiceTests.cs`
+> in a prior revision but not reflected in the structure block. Actual new pending = 33.
 
-### What changed since last revision
+### What changed since last revision (April 2026 audit)
 
-| Change                    | Detail                                                                     |
-| ------------------------- | -------------------------------------------------------------------------- |
-| Parts 11a–11i implemented | 9 controller test files created in `Controllers/`                          |
-| Parts 12a–12d implemented | 3 infrastructure test files in `Infrastructure/`, UpdateChecker appended   |
-| 66 new tests added        | All passing (282 total passing, 1 pre-existing failure unrelated to scope) |
+| Change                                       | Detail                                                                                |
+| -------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `ImportItemsFromExcelAsync` re-classified    | Method confirmed to exist in `ItemService`; prior checklist incorrectly marked N/A    |
+| 4 new `AuthController` tests identified      | `LoginMobile`, `Logout`, `RefreshToken`, `RefreshTokenMobile` endpoints not covered   |
+| 6 new `UserController` tests identified      | Teacher profile, `UpdateStaffOrAdminProfile`, import, RFID endpoints not covered      |
+| 7 new `ItemController` tests identified      | `GetAllItems`, serial/RFID/location/import endpoints not covered                      |
+| 4 new `LentItemsController` tests identified | `GetAll`, `GetAllBorrowedItems`, `Update` success path, `HideFromHistory` not covered |
+| Part 13 added                                | `RefreshTokenMiddleware` has testable branching logic — 5 tests identified            |
+| Part 14 added                                | `HealthController` has 2 branches (200 / 503) — not covered                           |
 
 ---
 
-## 11. Controller Tests — 0 / 57 🆕
+## 3 (pending). ItemService — `ImportItemsFromExcelAsync` — 0 / 5 🆕
+
+**File:** `Services/ItemServiceTests.cs` (append to existing class)
+
+> **Constructor note:** `ItemService` requires `IItemRepository`, `IMapper`, `IWebHostEnvironment`,
+> `IArchiveItemsService`, `ILentItemsRepository`, `ISupabaseStorageService`. All are already mocked
+> in the existing `ItemServiceTests` class — just add the new tests below.
+>
+> **Key logic to mirror:**
+>
+> - Reads XLSX via `ExcelReaderFactory` (uses `ExcelDataReader` library)
+> - Validates `SerialNumber` is non-empty; skips row and increments `FailureCount` if missing
+> - Normalises serial number to uppercase and prepends `SN-` if absent
+> - Calls `_itemRepository.GetBySerialNumberAsync` to detect duplicates → adds to `SkippedDuplicates`
+> - Calls `_itemRepository.AddRangeAsync` + `SaveChangesAsync` only when at least one item is valid
+> - Returns `ImportItemsResponseDto` with `SuccessCount`, `FailureCount`, `SkippedDuplicates`, `Errors`
+>
+> **Mocking note:** `ImportItemsFromExcelAsync` reads the file stream directly via `ExcelReaderFactory`,
+> which cannot be mocked. Use a real minimal XLSX byte array (embedded constant) passed via a
+> `MemoryStream`-backed `IFormFile` mock — the same pattern used in `UtilityServiceTests` for
+> `ExcelReaderService`.
+
+- [ ] `ImportItemsFromExcelAsync_ReturnsFailure_WhenAllRowsMissingSerialNumber`
+  - Provide a valid XLSX with one data row where `SerialNumber` column is empty
+  - Assert `SuccessCount == 0`, `FailureCount == 1`, `Errors` contains `"Missing SerialNumber"`
+
+- [ ] `ImportItemsFromExcelAsync_SkipsDuplicate_WhenSerialNumberAlreadyExists`
+  - `_mockItemRepo.Setup(r => r.GetBySerialNumberAsync("SN-EXIST")).ReturnsAsync(existingItem)`
+  - Provide XLSX with one row whose serial resolves to `SN-EXIST`
+  - Assert `SuccessCount == 0`, `SkippedDuplicates.Count == 1`
+
+- [ ] `ImportItemsFromExcelAsync_NormalisesSerialNumber_ToUppercaseWithPrefix`
+  - Provide XLSX with serial `"abc123"` (no prefix, lowercase)
+  - Capture entity passed to `AddRangeAsync`
+  - Assert saved serial is `"SN-ABC123"`
+
+- [ ] `ImportItemsFromExcelAsync_CallsAddRangeAsync_WhenAtLeastOneRowIsValid`
+  - Provide XLSX with one valid row
+  - `_mockItemRepo.Setup(r => r.GetBySerialNumberAsync(...)).ReturnsAsync((Item?)null)`
+  - Verify `_mockItemRepo.Verify(r => r.AddRangeAsync(It.IsAny<IEnumerable<Item>>()), Times.Once)`
+
+- [ ] `ImportItemsFromExcelAsync_DoesNotCallAddRangeAsync_WhenNoValidRows`
+  - All rows have empty serial numbers
+  - Verify `_mockItemRepo.Verify(r => r.AddRangeAsync(...), Times.Never)`
+
+---
+
+## 13. RefreshTokenMiddleware (`Infrastructure/RefreshTokenMiddlewareTests.cs`) — 0 / 5 🆕
+
+**File:** `Infrastructure/RefreshTokenMiddlewareTests.cs` _(new file)_
+**Injects:** `RequestDelegate` (mock), `ILogger<RefreshTokenMiddleware>` (mock)
+**Note:** `IAuthService` is resolved from `HttpContext.RequestServices` (scoped), not the constructor.
+Inject it via a mock `IServiceProvider` set on `HttpContext.RequestServices`.
+
+> **Key logic to mirror from `RefreshTokenMiddleware.InvokeAsync`:**
+>
+> - If `context.User.Identity.IsAuthenticated == false` → skip refresh, call `_next`
+> - If `exp` claim missing or unparseable → skip refresh, call `_next`
+> - If `timeUntilExpiry > 0 && <= 10s` OR `timeUntilExpiry < 0 && >= -5s` → call `authService.RefreshToken()`
+> - If `RefreshTokenException` thrown → delete cookie, set 401, **return** (do not call `_next`)
+> - If token is not near expiry → skip refresh, call `_next`
+
+- [ ] `InvokeAsync_SkipsRefresh_WhenUserIsNotAuthenticated`
+  - `HttpContext.User.Identity.IsAuthenticated == false`
+  - Verify `_mockNext` was called once; `_mockAuthService.RefreshToken` never called
+
+- [ ] `InvokeAsync_SkipsRefresh_WhenExpClaimIsMissing`
+  - Authenticated user but no `exp` claim
+  - Verify `_mockNext` called once; no refresh attempted
+
+- [ ] `InvokeAsync_CallsRefreshToken_WhenTokenIsNearExpiry`
+  - Set `exp` claim to `DateTimeOffset.UtcNow.AddSeconds(5).ToUnixTimeSeconds()` (within 10 s threshold)
+  - Verify `_mockAuthService.Verify(s => s.RefreshToken(), Times.Once)`
+  - Verify `_mockNext` still called after successful refresh
+
+- [ ] `InvokeAsync_Returns401_AndDoesNotCallNext_WhenRefreshTokenExceptionThrown`
+  - Token near expiry; `_mockAuthService.RefreshToken()` throws `RefreshTokenException`
+  - Assert `context.Response.StatusCode == 401`
+  - Verify `_mockNext` was **never** called
+
+- [ ] `InvokeAsync_ContinuesPipeline_WhenTokenIsNotNearExpiry`
+  - Set `exp` claim to `DateTimeOffset.UtcNow.AddMinutes(30).ToUnixTimeSeconds()` (well outside threshold)
+  - Verify `_mockNext` called once; no refresh attempted
+
+---
+
+## 14. HealthController (`Controllers/HealthControllerTests.cs`) — 0 / 2 🆕
+
+**File:** `Controllers/HealthControllerTests.cs` _(new file)_
+**Injects:** `HealthCheckService` (mock)
+
+> `HealthCheckService` is a concrete class from `Microsoft.Extensions.Diagnostics.HealthChecks`.
+> Mock it with `Mock<HealthCheckService>` and set up `CheckHealthAsync()` to return a
+> `HealthReport` with the desired `HealthStatus`.
+
+- [ ] `Get_Returns_200_WhenAllChecksHealthy`
+  - `_mockHealthCheckService.Setup(s => s.CheckHealthAsync(...))` returns `HealthReport` with `HealthStatus.Healthy`
+  - Assert `OkObjectResult`
+
+- [ ] `Get_Returns_503_WhenAnyCheckUnhealthy`
+  - `CheckHealthAsync` returns `HealthReport` with `HealthStatus.Unhealthy`
+  - Assert `ObjectResult` with `StatusCode == 503`
+
+---
+
+## 11. Controller Tests — 40 / 76 ⚠️
 
 > **Approach:** Instantiate controllers directly with mocked `IService` dependencies.
 > Use `DefaultHttpContext` + `ClaimsPrincipal` to simulate authenticated users.
-> No `WebApplicationFactory` or `TestServer` needed — these are pure unit tests
-> that verify routing decisions, HTTP status codes, and `ApiResponse` shape.
->
-> **Constructor pattern for all controller tests:**
->
-> ```csharp
-> private static ClaimsPrincipal MakeUser(string role, Guid? id = null) =>
->     new(new ClaimsIdentity(new[]
->     {
->         new Claim(ClaimTypes.NameIdentifier, (id ?? Guid.NewGuid()).ToString()),
->         new Claim(ClaimTypes.Role, role)
->     }, "Test"));
-> ```
+> No `WebApplicationFactory` or `TestServer` needed — these are pure unit tests.
 
 ---
 
-### 11a. AuthController (`Controllers/AuthControllerTests.cs`) — 7 / 7 ✅
+### 11a. AuthController (`Controllers/AuthControllerTests.cs`) — 7 / 11 ⚠️
 
 **File:** `Controllers/AuthControllerTests.cs`
 **Injects:** `IAuthService`, `IUserService`, `IWebHostEnvironment`, `ILogger<AuthController>`
 
 - [x] `GetMyProfile_Returns_Unauthorized_WhenClaimMissing`
-  - Set `HttpContext.User` to an unauthenticated principal (no NameIdentifier claim)
-  - Assert `UnauthorizedObjectResult` with `Success = false`
-
 - [x] `GetMyProfile_Returns_NotFound_WhenUserProfileNull`
-  - Valid claim, `_mockUserService.GetUserProfileByIdAsync` returns `null`
-  - Assert `NotFoundObjectResult`
-
 - [x] `GetMyProfile_Returns_Ok_WithProfile`
-  - Valid claim, service returns a profile object
-  - Assert `OkObjectResult`, `response.Success == true`
-
 - [x] `Register_Returns_Unauthorized_WhenClaimInvalid`
-  - `User.FindFirstValue(ClaimTypes.NameIdentifier)` returns non-parseable string
-  - Assert `UnauthorizedObjectResult`
-
 - [x] `Register_Returns_201_OnSuccess`
-  - Valid caller claim, `_mockAuthService.Register` returns a `UserDto`
-  - Assert `ObjectResult` with `StatusCode == 201`
-
 - [x] `Login_Returns_Ok_WithUserDto`
-  - `_mockAuthService.Login` returns a `UserDto`
-  - Assert `OkObjectResult`, `response.Data` is not null
-
 - [x] `ChangePassword_Returns_Ok_OnSuccess`
-  - `_mockAuthService.ChangePassword` completes without throwing
-  - Assert `OkObjectResult`, `response.Success == true`
+- [ ] `LoginMobile_Returns_Ok_WithMobileLoginResponseDto`
+- [ ] `Logout_Returns_Ok_OnSuccess`
+- [ ] `RefreshToken_Returns_Ok_WithNewAccessToken`
+- [ ] `RefreshTokenMobile_Returns_Ok_WithNewTokenPair`
 
 ---
 
-### 11b. UserController (`Controllers/UserControllerTests.cs`) — 8 / 8 ✅
+### 11b. UserController (`Controllers/UserControllerTests.cs`) — 8 / 14 ⚠️
 
 **File:** `Controllers/UserControllerTests.cs`
 **Injects:** `IUserService`, `IUserRepository`, `IMapper`, `IAuthorizationService`
@@ -592,10 +673,16 @@ All 57 previously pending tests have been implemented and are passing.
 - [x] `UpdateStudentProfile_Returns_Forbidden_WhenStudentUpdatesOtherProfile`
 - [x] `ArchiveUser_Returns_NotFound_WhenServiceReturnsNotFound`
 - [x] `ArchiveUser_Returns_Ok_OnSuccess`
+- [ ] `UpdateTeacherProfile_Returns_Unauthorized_WhenClaimInvalid`
+- [ ] `UpdateTeacherProfile_Returns_Forbidden_WhenTeacherUpdatesOtherProfile`
+- [ ] `UpdateStaffOrAdminProfile_Returns_Ok_OnSuccess`
+- [ ] `ImportStudents_Returns_Ok_WithImportSummary`
+- [ ] `GetStudentByIdNumber_Returns_NotFound_WhenNull`
+- [ ] `RegisterRfidToStudent_Returns_Ok_OnSuccess`
 
 ---
 
-### 11c. ItemController (`Controllers/ItemControllerTests.cs`) — 8 / 8 ✅
+### 11c. ItemController (`Controllers/ItemControllerTests.cs`) — 8 / 15 ⚠️
 
 **File:** `Controllers/ItemControllerTests.cs`
 **Injects:** `IItemService`
@@ -608,10 +695,17 @@ All 57 previously pending tests have been implemented and are passing.
 - [x] `ScanRfid_Returns_NotFound_WhenNoItemLinked`
 - [x] `ArchiveItem_Returns_NotFound_WhenItemNotFound`
 - [x] `ArchiveItem_Returns_Ok_OnSuccess`
+- [ ] `GetAllItems_Returns_Ok_WithItemList`
+- [ ] `GetItemBySerialNumber_Returns_NotFound_WhenNull`
+- [ ] `GetItemBySerialNumber_Returns_Ok_WhenFound`
+- [ ] `GetByRfid_Returns_NotFound_WhenNoItemRegistered`
+- [ ] `RegisterRfid_Returns_Conflict_WhenRfidAlreadyTaken`
+- [ ] `UpdateLocation_Returns_NotFound_WhenItemNotFound`
+- [ ] `ImportItemsFromExcel_Returns_415_WhenFileValidationFails`
 
 ---
 
-### 11d. LentItemsController (`Controllers/LentItemsControllerTests.cs`) — 7 / 7 ✅
+### 11d. LentItemsController (`Controllers/LentItemsControllerTests.cs`) — 7 / 11 ⚠️
 
 **File:** `Controllers/LentItemsControllerTests.cs`
 **Injects:** `ILentItemsService`
@@ -623,13 +717,14 @@ All 57 previously pending tests have been implemented and are passing.
 - [x] `Update_Returns_NotFound_WhenServiceReturnsFalse`
 - [x] `ArchiveLentItems_Returns_NotFound_WhenNotFound`
 - [x] `GetByDateTime_Returns_BadRequest_WhenDateInvalid`
+- [ ] `GetAll_Returns_Ok_WithLentItemList`
+- [ ] `GetAllBorrowedItems_Returns_Ok_WithBorrowedList`
+- [ ] `Update_Returns_Ok_WhenServiceReturnsTrue`
+- [ ] `HideFromHistory_Returns_Unauthorized_WhenClaimMissing`
 
 ---
 
 ### 11e. ActivityLogController (`Controllers/ActivityLogControllerTests.cs`) — 4 / 4 ✅
-
-**File:** `Controllers/ActivityLogControllerTests.cs`
-**Injects:** `IActivityLogService`
 
 - [x] `GetAll_Returns_Ok_WithLogs`
 - [x] `GetById_Returns_NotFound_WhenNull`
@@ -640,18 +735,12 @@ All 57 previously pending tests have been implemented and are passing.
 
 ### 11f. SummaryController (`Controllers/SummaryControllerTests.cs`) — 2 / 2 ✅
 
-**File:** `Controllers/SummaryControllerTests.cs`
-**Injects:** `ISummaryService`
-
 - [x] `GetOverallSummary_Returns_Ok_WithSummaryDto`
 - [x] `GetOverallSummary_WrapsData_InApiResponse`
 
 ---
 
 ### 11g. ArchiveItemsController (`Controllers/ArchiveItemsControllerTests.cs`) — 4 / 4 ✅
-
-**File:** `Controllers/ArchiveItemsControllerTests.cs`
-**Injects:** `IArchiveItemsService`, `ILogger<ArchiveItemsController>`
 
 - [x] `GetArchivedItemById_Returns_NotFound_WhenNull`
 - [x] `GetArchivedItemById_Returns_Ok_WhenFound`
@@ -662,9 +751,6 @@ All 57 previously pending tests have been implemented and are passing.
 
 ### 11h. ArchiveLentItemsController (`Controllers/ArchiveLentItemsControllerTests.cs`) — 4 / 4 ✅
 
-**File:** `Controllers/ArchiveLentItemsControllerTests.cs`
-**Injects:** `IArchiveLentItemsService`, `ILogger<ArchiveLentItemsController>`
-
 - [x] `GetLentItemsArchiveById_Returns_NotFound_WhenNull`
 - [x] `GetLentItemsArchiveById_Returns_Ok_WhenFound`
 - [x] `RestoreArchivedLentItems_Returns_NotFound_WhenNull`
@@ -673,9 +759,6 @@ All 57 previously pending tests have been implemented and are passing.
 ---
 
 ### 11i. ArchiveUsersController (`Controllers/ArchiveUsersControllerTests.cs`) — 4 / 4 ✅
-
-**File:** `Controllers/ArchiveUsersControllerTests.cs`
-**Injects:** `IArchiveUserService`
 
 - [x] `GetArchivedUserById_Returns_NotFound_WhenNull`
 - [x] `GetArchivedUserById_Returns_Ok_WhenFound`
@@ -686,11 +769,7 @@ All 57 previously pending tests have been implemented and are passing.
 
 ## 12. Infrastructure & Cross-Cutting — 18 / 18 ✅
 
----
-
-### 12a. GlobalExceptionHandler (`Infrastructure/GlobalExceptionHandlerTests.cs`) — 6 / 6 ✅
-
-**File:** `Infrastructure/GlobalExceptionHandlerTests.cs`
+### 12a. GlobalExceptionHandler — 6 / 6 ✅
 
 - [x] `InvokeAsync_Returns_403_For_UnauthorizedAccessException`
 - [x] `InvokeAsync_Returns_404_For_KeyNotFoundException`
@@ -699,40 +778,22 @@ All 57 previously pending tests have been implemented and are passing.
 - [x] `InvokeAsync_Returns_401_For_InvalidCredentialsException`
 - [x] `InvokeAsync_Returns_500_For_UnhandledException`
 
----
-
-### 12b. Authorization Handlers (`Infrastructure/AuthorizationHandlerTests.cs`) — 6 / 6 ✅
-
-**File:** `Infrastructure/AuthorizationHandlerTests.cs`
-
-#### SuperAdminBypassHandler (2 tests)
+### 12b. Authorization Handlers — 6 / 6 ✅
 
 - [x] `SuperAdminBypassHandler_Succeeds_AllRequirements_WhenUserIsSuperAdmin`
 - [x] `SuperAdminBypassHandler_DoesNotSucceed_WhenUserIsNotSuperAdmin`
-
-#### ViewProfileRequirement.ViewProfileHandler (4 tests)
-
 - [x] `ViewProfileHandler_Succeeds_WhenUserIsAdmin`
 - [x] `ViewProfileHandler_Succeeds_WhenUserIsStaff`
 - [x] `ViewProfileHandler_Succeeds_WhenUserViewsOwnProfile`
 - [x] `ViewProfileHandler_Fails_WhenStudentViewsOtherProfile`
 
----
-
-### 12c. UserValidationService (`Infrastructure/UserValidationServiceTests.cs`) — 3 / 3 ✅
-
-**File:** `Infrastructure/UserValidationServiceTests.cs`
-**Injects:** `IUserRepository`
+### 12c. UserValidationService — 3 / 3 ✅
 
 - [x] `ValidateUniqueUser_Throws_WhenUsernameAlreadyTaken`
 - [x] `ValidateUniqueUser_Throws_WhenEmailAlreadyExists`
 - [x] `ValidateUniqueUser_Throws_WhenPhoneNumberAlreadyUsed`
 
----
-
-### 12d. UpdateChecker Utility (`Utilities/UtilityServiceTests.cs` — append) — 3 / 3 ✅
-
-> Added to the existing `UtilityServiceTests.cs` file under a `#region UpdateChecker` block.
+### 12d. UpdateChecker Utility — 3 / 3 ✅
 
 - [x] `UpdateChecker_UpdatesString_WhenNewValueIsNonEmpty`
 - [x] `UpdateChecker_DoesNotUpdate_WhenNewValueIsNull`
